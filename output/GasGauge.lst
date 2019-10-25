@@ -1,0 +1,294 @@
+C51 COMPILER V9.52.0.0   GASGAUGE                                                          10/24/2019 16:31:17 PAGE 1   
+
+
+C51 COMPILER V9.52.0.0, COMPILATION OF MODULE GASGAUGE
+OBJECT MODULE PLACED IN .\output\GasGauge.obj
+COMPILER INVOKED BY: C:\Program Files (x86)\keil 51\C51\BIN\C51.EXE code\GasGauge.c LARGE OPTIMIZE(7,SPEED) BROWSE INCDI
+                    -R(.\header;.\roidmi\inc) DEBUG OBJECTEXTEND PRINT(.\output\GasGauge.lst) TABS(2) OBJECT(.\output\GasGauge.obj)
+
+line level    source
+
+   1          /********************************************************************************
+   2          Copyright (C), Sinowealth Electronic. Ltd.
+   3          Author:   andyliu
+   4          Version:  V0.0
+   5          Date:     2014/05/30
+   6          History:
+   7            V0.0    2014/05/30     Preliminary
+   8          ********************************************************************************/
+   9          #include "system.h"
+  10          #include "GasGauge.h"
+  11          
+  12          
+  13          /*******************************************************************************
+  14          Function: GaugeManage(void)
+  15          Description: 
+  16          Input: 
+  17          Output: 
+  18          Others:
+  19          ********************************************************************************/
+  20          void GaugeManage(void) //1sÖ´ÐÐÒ»´Î
+  21          {
+  22   1        U16 FccDelta;
+  23   1      //Èç¹ûÕýÔÚ³äµç£¬ÓÐ±È½ÏÑÏÖØµÄ´íÎó±¨¾¯£¬ÂúÈÝÁ¿±êÖ¾²»ÖÃÎ»
+  24   1        if(bCHGING | bAFE_SC | bOCC | bOCD | bOCD2)           //If the charge or discharge overcurrent
+  25   1        {
+  26   2          bVDQ = 0; //Âú³äÈÝÁ¿¸üÐÂÓÐÐ§±êÖ¾Î»
+  27   2        }
+  28   1        else
+  29   1        { 
+  30   2          //E2uiNearFCC ÓÐÐ§·Åµç¿ªÊ¼Ê±£¬Ê£ÓàÈÝÁ¿ÓëÂú³äÈÝÁ¿²îÖµ£¬Õâ¸öÖµÊÇÍâ²¿ÉèÖÃµÄ
+  31   2          //ulFCC ³äÂúµçÁ¿   ulRCÊ£ÓàµçÁ¿
+  32   2          //ÂúÈÝÁ¿¸üÐÂÔÊÐíµÄ×îµÍÎÂ¶È          //200
+  33   2          if(!bVDQ && (Info.ulRC>(Info.ulFCC-E2uiNearFCC)) && (uiTempeMin>E2uiLearnLowTemp)) //E2uiLearnLowTemp:27
+             -31
+  34   2          {
+  35   3              bVDQ = 1;//Âú³äÈÝÁ¿¸üÐÂÓÐÐ§±êÖ¾Î»
+  36   3              ulFCCCount = 0;
+  37   3          }
+  38   2        }
+  39   1      #if elecdebug
+  40   1        printf("µçÐ¾Âú³äÈÝÁ¿¸üÐÂbVDQ = %x",((uiPackStatus&0x0400)>>10));
+  41   1      #endif
+  42   1      //ÕýÔÚ³äµç
+  43   1        if(bCHGING)                   //charging  I*t = 1s
+  44   1        {
+  45   2          uiRCCharge += slCadcCurAverage;//°ÑÃ¿´ÎµçÁ÷Öµ¼ÓÆðÀ´         3600 /1s
+  46   2          while(uiRCCharge >= VALUE_mAH)    //Õâ±ßÊÇ»»Ëã£ºÂú3600¸öµ¥Î»²ÅÊÇ1mah£¬ÒòÎª3600*£¨1/3600£©  i*h =1maHÕâ±ßÆä
+             -Êµ¾ÍÊÇ¼ÆËã¶àÉÙmaHÁË
+  47   2          {
+  48   3            uiRCCharge -= VALUE_mAH;      
+  49   3            if(Info.ulRC < Info.ulFCC)//Ê£ÓàµçÁ¿Ð¡ÓÚ³äÂúµçÁ¿
+  50   3            {
+  51   4              UART_IRQ_DISABLE;
+  52   4              Info.ulRC++;              //have charged 1mAh
+C51 COMPILER V9.52.0.0   GASGAUGE                                                          10/24/2019 16:31:17 PAGE 2   
+
+  53   4              UART_IRQ_ENABLE;
+  54   4            }
+  55   3            else    //Ê£ÓàµçÁ¿´óÓÚµÈÓÚ³äÂúµçÁ¿ 
+  56   3            {
+  57   4              UART_IRQ_DISABLE;
+  58   4              Info.ulRC = Info.ulFCC;       
+  59   4              UART_IRQ_ENABLE;      
+  60   4              uiRCCharge = 0;
+  61   4            }
+  62   3          }
+  63   2        }
+  64   1        else if(bDSGING)                          //discharging
+  65   1        {
+  66   2          uiRCDischarge += -slCadcCurAverage;//Õâ±ßÊÇ»ý·Ö·ÅµçµÄµçÁ÷
+  67   2          if(uiRCDischarge >= VALUE_mAH) //ÔÚ·ÅµçµÄÊ±ºòÔÚ¼ÆËãÂúÈÝÁ¿Öµ
+  68   2          {
+  69   3            while(uiRCDischarge >= VALUE_mAH)         
+  70   3            {
+  71   4              uiRCDischarge -= VALUE_mAH;
+  72   4              ulDsgCycleCount++;    //·Åµç´ÎÊý    ¶àÉÙmAh
+  73   4      #if elecdebug
+  74   4        printf("·Åµç´ÎÊý mAh IulDsgCycleCount= %ld,info.ulRC = %ld\n",ulDsgCycleCount,Info.ulRC);
+  75   4      #endif
+  76   4              if(Info.ulRC > 0)
+  77   4              {
+  78   5                UART_IRQ_DISABLE;
+  79   5                Info.ulRC--; //Ê£ÓàµÄµçÁ¿µÝ¼õ
+  80   5                UART_IRQ_ENABLE;
+  81   5              }
+  82   4              if(bVDQ)  //Âú³äÈÝÁ¿¸üÐÂÓÐÐ§±êÖ¾Î»£¬³äÂúºó¿ªÊ¼¼ÆÊýµÄÈÝÁ¿
+  83   4              {
+  84   5                ulFCCCount++; //×ÜµÄÈÝÁ¿
+  85   5              }
+  86   4            }
+  87   3        
+  88   3      #if elecdebug
+  89   3        printf("Ê£ÓàµçÁ¿ Info.ulRC= %ld\n",Info.ulRC );
+  90   3      #endif
+  91   3      
+  92   3            //2000 Èç¹ûÓÐ2000mAhÁË
+  93   3            if(ulDsgCycleCount >= E2ulCycleThreshold)       //·Åµç´ÎÊý£¨×ÜµÄmah£© > ÏµÍ³µ¥´ÎÑ­»··Åµç×ÜÁ¿£¨mAh£©Ò²¾ÍÊÇ·
+             -ÅµçÒÑ¾­·ÅÍêÁË
+  94   3            {
+  95   4              ulDsgCycleCount -= E2ulCycleThreshold; 
+  96   4              E2uiCycleCount++; //Ñ­»··Åµç´ÎÊý //Õâ¸öÊýÖµÒª´æ´¢ÆðÀ´
+  97   4              Info.uiCycleCount = E2uiCycleCount;
+  98   4              bWriteFlashFlg = 1;                 //write E2uiCycleCount to flash flag
+  99   4              ucWriteFlashCnt=0;
+ 100   4      //            UpEepromWithDelay();
+ 101   4            }
+ 102   3          }
+ 103   2        }
+ 104   1        //ÏÂÃæÕâ¸öÊÇ¸üÐÂRSOCµÄÖµ£¬ÒòÎªÉÏÃæulrcÒÑ¾­±ä¶¯ÁË
+ 105   1        if(Info.ulRC < Info.ulFCC)                      //Calculate RSOC
+ 106   1        {
+ 107   2          UART_IRQ_DISABLE;
+ 108   2          Info.uiRSOC = (U32)Info.ulRC*100/Info.ulFCC;
+ 109   2          UART_IRQ_ENABLE;
+ 110   2        }
+ 111   1        else                        
+ 112   1        {
+ 113   2          UART_IRQ_DISABLE;
+C51 COMPILER V9.52.0.0   GASGAUGE                                                          10/24/2019 16:31:17 PAGE 3   
+
+ 114   2          Info.uiRSOC = 100;
+ 115   2          UART_IRQ_ENABLE;
+ 116   2        }
+ 117   1      #if elecdebug
+ 118   1        printf("Info.uiRSOC = %d\n",Info.uiRSOC );
+ 119   1      #endif
+ 120   1      
+ 121   1        
+ 122   1        if(bFD) //Discharge end  ¹ý·ÅÁËÖ®ºóÔÙ¸üÐÂÈÝÁ¿Öµ
+ 123   1        {
+ 124   2      #if elecdebug
+ 125   2            printf("bFD --------\n" );
+ 126   2      #endif
+ 127   2          if(bVDQ)                                    //E2ulFCC updata
+ 128   2          {
+ 129   3      #if elecdebug
+ 130   3            printf("bVDQ --------\n" );
+ 131   3      #endif
+ 132   3            FccDelta = (Info.ulFCC/10)*FCC_UPDATE_PERCENT;//Âú³äÈÝÁ¿ * 30%
+ 133   3            
+ 134   3            if(ulFCCCount > Info.ulFCC+FccDelta)// > FCC*130%
+ 135   3            {
+ 136   4              ulFCCCount = Info.ulFCC + FccDelta;
+ 137   4            }
+ 138   3            else if(ulFCCCount+FccDelta < Info.ulFCC) //< FCC*30%
+ 139   3            {
+ 140   4              ulFCCCount = Info.ulFCC - FccDelta;
+ 141   4            }
+ 142   3            UART_IRQ_DISABLE;
+ 143   3            Info.ulFCC = ulFCCCount;      //¸üÐÂ×ÜµÄÈÝÁ¿Öµ      //write E2ulFCC to flash
+ 144   3            UART_IRQ_ENABLE;
+ 145   3            //Ð´ÈëEE
+ 146   3            E2ulFCC = ulFCCCount;        //¸üÐÂ×ÜµÄÈÝÁ¿Öµ ,ÒªÐ´ÈëEEPROM
+ 147   3      #if elecdebug
+ 148   3            printf("¹ý·ÅÖ®ºó¸üÐÂÈÝÁ¿Öµ Info.ulFCC = %ld£¬E2ulFCC = %ld\n",Info.ulFCC,E2ulFCC );
+ 149   3      #endif
+ 150   3            bVDQ = 0;
+ 151   3            bWriteFlashFlg = 1;         //Updated calibration parameters, and written to the flash
+ 152   3            ucWriteFlashCnt=0;
+ 153   3            UpEepromWithDelay();
+ 154   3          }
+ 155   2      
+ 156   2      
+ 157   2          UART_IRQ_DISABLE;
+ 158   2          if(Info.uiRSOC > 10) 
+ 159   2          {
+ 160   3            Info.uiRSOC = 10;
+ 161   3          }
+ 162   2          Info.ulRC = Info.ulFCC*Info.uiRSOC/100;//·Åµç½ØÖ¹£¬½«Ê£ÓàµçÁ¿µ÷ÕûÎªÂú³äµÄ10%
+ 163   2          UART_IRQ_ENABLE;
+ 164   2        }
+ 165   1        else if(bFC)  //Charge end//·Åµç½ØÖ¹£¬½«Ê£ÓàµçÁ¿µ÷ÕûÎªÂú³äµÄ100%
+ 166   1        {
+ 167   2      #if elecdebug
+ 168   2            printf("bFC --------\n" );
+ 169   2      #endif
+ 170   2          UART_IRQ_DISABLE;
+ 171   2          Info.ulRC = Info.ulFCC;//¸üÐÂÊ£ÓàµçÁ¿Öµ
+ 172   2          Info.uiRSOC = 100;
+ 173   2          UART_IRQ_ENABLE;
+ 174   2        }
+ 175   1        
+C51 COMPILER V9.52.0.0   GASGAUGE                                                          10/24/2019 16:31:17 PAGE 4   
+
+ 176   1        UART_IRQ_DISABLE;
+ 177   1        if(bUV)       //¹ý·Å×´Ì¬½«Ê£ÓàµçÁ¿µ÷ÕûÎª0%      
+ 178   1        {
+ 179   2      #if elecdebug
+ 180   2            printf("bUV --------\n" );
+ 181   2      #endif
+ 182   2          Info.ulRC = 0;                                
+ 183   2          Info.uiRSOC = 0;
+ 184   2        }
+ 185   1        else if(bHV)      //¹ý³ä×´Ì¬½«Ê£ÓàµçÁ¿µ÷ÕûÎª100%                          
+ 186   1        {
+ 187   2      #if elecdebug
+ 188   2            printf("bHV --------\n" );
+ 189   2      #endif
+ 190   2          Info.ulRC = Info.ulFCC;
+ 191   2          Info.uiRSOC = 100;
+ 192   2        }
+ 193   1        //ÒÔÉÏ¸üÐÂÊ£ÓàµçÁ¿µÄ×÷ÓÃÊÇ¸üÐÂÄ¿Ç°µÄµçÁ¿£¬ÊÇÓÃ°Ù·Ö±ÈÀ´±íÊ¾Ä¿Ç°µÄµçÁ¿µÄ
+ 194   1        UART_IRQ_ENABLE;
+ 195   1        
+ 196   1      #if elecdebug
+ 197   1        printf("Ê£ÓàµçÁ¿ Info.ulRC= %ld,µçÁ¿°Ù·Ö±ÈInfo.uiRSOC = %d £¬Info.ulFCC = %ld£¬E2ulFCC = %ld ,ulFCCCount 
+             -= %ld\n",Info.ulRC ,Info.uiRSOC, Info.ulFCC, E2ulFCC,ulFCCCount);
+ 198   1      #endif
+ 199   1      }
+ 200          
+ 201          
+ 202          /*******************************************************************************
+ 203          Function:InitGasGauge() 
+ 204          Description: Calculate the remaining capacity according to pack voltage  
+ 205          Input:  NULL  
+ 206          Output: NULL
+ 207          Others:
+ 208          *******************************************************************************/
+ 209          void InitGasGauge(void)
+ 210          {
+ 211   1        U8 i;
+ 212   1        
+ 213   1        Info.uiRSOC = 100;
+ 214   1        for(i=0; i<10; i++)
+ 215   1        {
+ 216   2      #if debug
+                  printf("\n E2uiVOC[%bd]= %d, \n",i,E2uiVOC[i]);    //3600*8=25600
+              #endif    
+ 219   2          if(Info.ulVoltage < E2uiVOC[i]*ucCellNum)//Èç¹û×ÜµÄµçÑ¹Òª±È£¨µ¥½Ú£¨Éè¶¨µÄµçÑ¹Öµ£©*½ÚÊý£©µçÑ¹Ð¡
+ 220   2          {
+ 221   3      #if debug
+                  printf("\n E2uiVOC[%bd]= %d,E2uiDsgEndVol= %d \n",i,E2uiVOC[i],E2uiDsgEndVol);    
+              #endif
+ 224   3            if(i == 0)
+ 225   3            {
+ 226   4              if(Info.ulVoltage < E2uiDsgEndVol*ucCellNum)//Ð¡ÓÚ½ØÖ¹µçÑ¹  2900
+ 227   4              {
+ 228   5                Info.uiRSOC = 0;  
+ 229   5              }
+ 230   4              else
+ 231   4              {
+ 232   5                //£¨µç³Ø×ÜµçÑ¹ - µ¥½Ú·Åµç½ØÖ¹µçÑ¹*10£©*10/£¨µÚÒ»½Úµç³ØµçÑ¹ - µ¥½Ú·Åµç½ØÖ¹µçÑ¹£©*10
+ 233   5                Info.uiRSOC = (U32)(Info.ulVoltage-E2uiDsgEndVol*ucCellNum)*10/((E2uiVOC[0]-E2uiDsgEndVol)*ucCellNum
+             -);  
+ 234   5              }
+ 235   4              break;
+C51 COMPILER V9.52.0.0   GASGAUGE                                                          10/24/2019 16:31:17 PAGE 5   
+
+ 236   4            }
+ 237   3            else
+ 238   3            {
+ 239   4              //Ê£ÓàµçÁ¿µÄ°Ù·Ö±È
+ 240   4              Info.uiRSOC = 10*i + (U32)(Info.ulVoltage-E2uiVOC[i-1]*ucCellNum)*10/((E2uiVOC[i]-E2uiVOC[i-1])*ucCell
+             -Num);
+ 241   4      #if elecdebug 
+ 242   4          printf("\n i=%bd  Ê£ÓàµçÁÁ°Ù·Ö±ÈInfo.uiRSOC = %d,Info.ulVoltage =%d,E2uiVOC[%bd] = %d ,E2uiVOC[%bd]=%d \
+             -n",i,Info.uiRSOC,Info.ulVoltage,i,E2uiVOC[i],i-1,E2uiVOC[i-1]);    
+ 243   4      #endif
+ 244   4              break;
+ 245   4            }
+ 246   3          }
+ 247   2        }
+ 248   1      //Ê£ÓàµçÁ¿ = ×ÜÈÝÁ¿*°Ù·Ö±È
+ 249   1        Info.ulRC = E2ulFCC*Info.uiRSOC/100;
+ 250   1        
+ 251   1      #if elecdebug
+ 252   1          printf("\n E2ulFCC =%ld Ê£ÓàµçÁ¿Info.ulRC = %ld \n",E2ulFCC,Info.ulRC);    
+ 253   1      #endif
+ 254   1      }
+ 255          
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =   2076    ----
+   CONSTANT SIZE    =    483    ----
+   XDATA SIZE       =   ----       3
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

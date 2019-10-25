@@ -1,0 +1,236 @@
+C51 COMPILER V9.52.0.0   BALANCE                                                           10/24/2019 11:20:58 PAGE 1   
+
+
+C51 COMPILER V9.52.0.0, COMPILATION OF MODULE BALANCE
+OBJECT MODULE PLACED IN .\output\Balance.obj
+COMPILER INVOKED BY: C:\Program Files (x86)\keil 51\C51\BIN\C51.EXE code\Balance.c LARGE OPTIMIZE(7,SPEED) BROWSE INCDIR
+                    -(.\header;.\roidmi\inc) DEBUG OBJECTEXTEND PRINT(.\output\Balance.lst) TABS(2) OBJECT(.\output\Balance.obj)
+
+line level    source
+
+   1          /********************************************************************************
+   2          Copyright (C), Sinowealth Electronic. Ltd.
+   3          Author:   andyliu
+   4          Version:  V0.0
+   5          Date:     2014/05/30
+   6          History:
+   7            V0.0    2014/05/30     Preliminary
+   8          ********************************************************************************/
+   9          #include "system.h"
+  10          #include "AfeMtp.h"
+  11          
+  12          
+  13          /*******************************************************************************
+  14          Function: BalManage(void)
+  15          Description:  
+  16          Input:    
+  17          Output: 
+  18          Others:
+  19          *******************************************************************************/
+  20          void BalManage(void)
+  21          {
+  22   1        U8 i;
+  23   1      
+  24   1        if(!bBalancingFlg) //Æ½ºâ¹ý³ÌÖÐµÄ±êÖ¾Î»£¬¸Ã±êÖ¾Îª1 Ê±£¬²»½øÐÐÏà¹ØµçÑ¹±£»¤ÅÐ¶Ï
+  25   1        {
+  26   2            if(bBAL_EN)//Æ½ºâ¹¦ÄÜÊ¹ÄÜ
+  27   2            {
+  28   3              uiBalanceChannel = 0;
+  29   3              if(((uiCellVmax>E2uiOVvol)&&(!bHV))||((uiCellVmax < E2uiOVRvol)&&(bHV))|| bOTC || bUTC || bOTD || bU
+             -TD) 
+  30   3              {
+  31   4                bBalanceFlg = 0;
+  32   4                ucBalanceTimeCnt = 0;
+  33   4              }
+  34   3              else
+  35   3              {
+  36   4                //4.1.1Æ½ºâ¹¦ÄÜ£¬µçÐ¾×î´óµçÑ¹´óÓÚÆ½ºâ¿ªÆôµçÑ¹£¬µçÑ¹²î´óÓÚÆ½ºâµçÑ¹²îãÐÖµ£¬³äµçµçÁ÷´óÓÚÆ½ºâµçÁ÷ãÐÖµ£¬Î¬
+             -³ÖÊÂ¼þÒ²Òª´óÓÚÆ½ºâµÄ¿ªÆôÊ±¼ä
+  37   4                if(((uiCellVmax>E2uiBalanceVol) && (uiCellVmax-uiCellVmin)>=E2uiBalanceVolDiff) && (Info.slCurr>=E2
+             -siBalCurrent))
+  38   4                {
+  39   5                  if(!bBalanceFlg)
+  40   5                  {
+  41   6                    ucBalanceTimeCnt++;                              
+  42   6                  }
+  43   5                  if(ucBalanceTimeCnt >= BAL_DELAY_CNT)                      
+  44   5                  {
+  45   6                    for(i=ucCellNumOffset; i<ucCellNumOffset+ucCellNum; i++)
+  46   6                    {
+  47   7                      if((Info.uiVCell[i]-uiCellVmin) >= E2uiBalanceVolDiff)
+  48   7                      {
+  49   8                        uiBalanceChannel |= (1<<i);
+  50   8                      }
+  51   7                    }
+C51 COMPILER V9.52.0.0   BALANCE                                                           10/24/2019 11:20:58 PAGE 2   
+
+  52   6                    bBalanceFlg = 1;
+  53   6                  }
+  54   5                }
+  55   4                else
+  56   4                {
+  57   5                  bBalanceFlg = 0;
+  58   5                  ucBalanceTimeCnt = 0;
+  59   5                }
+  60   4                }
+  61   3          }
+  62   2        } 
+  63   1      }
+  64          
+  65          
+  66          /*******************************************************************************
+  67          Function: CloseBal(void)
+  68          Description:  
+  69          Input:    
+  70          Output: 
+  71          Others:
+  72          *******************************************************************************/
+  73          void CloseBal(void)
+  74          {
+  75   1          REG.AFESCONF4 = 0;
+  76   1          TWIWriteAFE(AFE_SCONF4, &REG.AFESCONF4);       // CleaerBalance=0x00
+  77   1          REG.AFESCONF5 = 0;
+  78   1          TWIWriteAFE(AFE_SCONF5, &REG.AFESCONF5);       //when dec the VADC must close the balance 
+  79   1      }
+  80          
+  81          
+  82          /*******************************************************************************
+  83          Function: CheckCtoVol(void)
+  84          Description:  
+  85          Input:    
+  86          Output: 
+  87          Others:
+  88          *******************************************************************************/
+  89          bit CheckCtoVol(void)
+  90          {
+  91   1          BOOL bResult=0;
+  92   1      
+  93   1        if(uiCellVmin < 180)
+  94   1        {
+  95   2              bResult = 1;
+  96   2          if(++ucCtoCnt >= 10)    //¶ÏÏß 500ms
+  97   2              {
+  98   3                bCTO = 1;
+  99   3              }      
+ 100   2        }
+ 101   1        else
+ 102   1        {
+ 103   2          ucCtoCnt = 0;
+ 104   2        }
+ 105   1      
+ 106   1          return bResult;
+ 107   1      }
+ 108          
+ 109          
+ 110          /*******************************************************************************
+ 111          Function: BalProcess(void)
+ 112          Description:  
+ 113          Input:    
+C51 COMPILER V9.52.0.0   BALANCE                                                           10/24/2019 11:20:58 PAGE 3   
+
+ 114          Output: 
+ 115          Others:
+ 116          *******************************************************************************/
+ 117          void BalProcess(void)
+ 118          {
+ 119   1          U16 BalChTemp;
+ 120   1          
+ 121   1          switch(ucBalanceStep)
+ 122   1          {
+ 123   2              case BALANCE_ENABLE:          //VADC²É¼¯µÄÊý¾ÝÓÃÓÚÕý³£µçÑ¹ÅÐ¶Ï
+ 124   2                  if(bCellOpenDecFlag || bBalanceFlg)//bCellOpenDecFlag  ¶¨Ê±¿ªÆô¶ÏÏß¼ì²â2sÒ»´Î  bBalanceFlg Âú×
+             -ãÆ½ºâÌõ¼þºó£¬ÖÃÎ»¿ªÆôÆ½ºâ
+ 125   2                {
+ 126   3                    if(bBalanceOddFlg)                //odd balance
+ 127   3                    {
+ 128   4                        BalChTemp = uiBalanceChannel&0x5555;    //  0101 0101 0101 0101         
+ 129   4                    }
+ 130   3                    else                       //even balance
+ 131   3                    {
+ 132   4                        BalChTemp = uiBalanceChannel&0xAAAA;              
+ 133   4                    }
+ 134   3                    //¿ªÆô¶ÔÓ¦µÄÆ½ºâ»ØÂ·
+ 135   3                    REG.AFESCONF4 = BalChTemp>>5;       //Æ½ºâ»ØÂ·¿ØÖÆÎ»¸ß5Î»
+ 136   3                    TWIWriteAFE(AFE_SCONF4, &REG.AFESCONF4);       //CleaerBalance=0x00
+ 137   3                    REG.AFESCONF5 = BalChTemp;
+ 138   3                    TWIWriteAFE(AFE_SCONF5, &REG.AFESCONF5);       //when dec the VADC must close the balance 
+ 139   3                         
+ 140   3                    ucBalanceStep = BALANCE_START;
+ 141   3                    bBalancingFlg = 1;
+ 142   3                }
+ 143   2                  break;
+ 144   2      
+ 145   2              case BALANCE_START:         //VADC²É¼¯µÄµçÑ¹Êý¾Ý¶ªµô
+ 146   2                  ucBalanceStep = BALANCING;
+ 147   2                  break;
+ 148   2      
+ 149   2              case BALANCING:             //VADC²É¼¯µÄµçÑ¹Êý¾ÝÅÐ¶Ï¶ÏÏß
+ 150   2                  if(!CheckCtoVol())      //Èç¹û·¢ÏÖÓÐ¶ÏÏßÔòÁ¬Ðø¼ì²â¶ÏÏß£¬Õâ±ßÅÐ¶ÏÎÒÓÐÒìÒé
+ 151   2                {
+ 152   3                      CloseBal();
+ 153   3                      ucBalanceStep = BALANCE_DISABLE;
+ 154   3                      bBalanceOddFlg = ~bBalanceOddFlg;
+ 155   3                }
+ 156   2                  break;
+ 157   2      
+ 158   2              case BALANCE_DISABLE:       //VADC²É¼¯µÄµçÑ¹Êý¾Ý¶ªµô
+ 159   2                  if(!CheckCtoVol())      //Èç¹û·¢ÏÖÓÐ¶ÏÏßÔòÁ¬Ðø¼ì²â¶ÏÏß
+ 160   2                {
+ 161   3                      ucBalanceStep = BALANCE_NULL;
+ 162   3      //                bBalancingFlg = 0;
+ 163   3                }
+ 164   2                else 
+ 165   2                {
+ 166   3                        ucBalanceStep = BALANCE_ENABLE;
+ 167   3                        bBalanceOddFlg = ~bBalanceOddFlg;
+ 168   3                }
+ 169   2                  break;
+ 170   2      
+ 171   2              case BALANCE_NULL:          //VADC²É¼¯µÄÊý¾ÝÓÃÓÚÕý³£µçÑ¹ÅÐ¶Ï
+ 172   2                  ucBalanceStep = BALANCE_ENABLE;
+ 173   2                  bCellOpenDecFlag = 0;
+ 174   2                  bBalanceFlg = 0;
+C51 COMPILER V9.52.0.0   BALANCE                                                           10/24/2019 11:20:58 PAGE 4   
+
+ 175   2            bBalancingFlg = 0;    
+ 176   2                  break;
+ 177   2        }
+ 178   1      }
+ 179          
+ 180          
+ 181          /*******************************************************************************
+ 182          Function: CellOpenProcess(void)
+ 183          Description:  
+ 184          Input:    
+ 185          Output: 
+ 186          Others:
+ 187          *******************************************************************************/
+ 188          void CellOpenProcess(void)
+ 189          { 
+ 190   1          if(bCTO_EN)//Èç¹ûÓÐ¶ÏÏß¼ì²âÊ¹ÄÜ
+ 191   1        {
+ 192   2              if(++ucCellOpenDecCnt >= 40)          //2S ÄÇÃ´¾Í2s¿ªÆôÒ»´Î¶ÏÏß¼ì²â£¬·ÖÆæÅ¼¼ì²âÊ±ºòÐèÒª4sµÄÊ±¼ä
+ 193   2        {
+ 194   3                  ucCellOpenDecCnt = 0;
+ 195   3                  bCellOpenDecFlag = 1; //¿ª¶Ï¶ÏÏß¼ì²â±êÖ¾Î»
+ 196   3                  uiBalanceChannel = 0x03ff;
+ 197   3          }
+ 198   2        }
+ 199   1      }
+ 200          
+ 201          
+ 202          
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    572    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =   ----       2
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----       1
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

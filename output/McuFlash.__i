@@ -1,0 +1,1 @@
+"code\McuFlash.c" LARGE OPTIMIZE (7,SPEED) BROWSE INCDIR(.\header;.\roidmi\inc) DEBUG OBJECTEXTEND PRINT(.\output\McuFlash.lst) TABS (2) OBJECT(.\output\McuFlash.obj)

@@ -1,0 +1,286 @@
+C51 COMPILER V9.52.0.0   FUNCKEY                                                           10/24/2019 11:21:08 PAGE 1   
+
+
+C51 COMPILER V9.52.0.0, COMPILATION OF MODULE FUNCKEY
+OBJECT MODULE PLACED IN .\output\funckey.obj
+COMPILER INVOKED BY: C:\Program Files (x86)\keil 51\C51\BIN\C51.EXE roidmi\src\funckey.c LARGE OPTIMIZE(7,SPEED) BROWSE 
+                    -INCDIR(.\header;.\roidmi\inc) DEBUG OBJECTEXTEND PRINT(.\output\funckey.lst) TABS(2) OBJECT(.\output\funckey.obj)
+
+line level    source
+
+   1          #include "System.h"
+   2          #include "AfeMtp.h"
+   3          
+   4          
+   5          
+   6          //这个算法其实最多只能8个按键
+   7          /*************************************************************************************************
+   8          * 函数名: button_key0_read
+   9          * 参  数: 按键功能选择
+  10          * 返回值: 无
+  11          * 作  用: 
+  12          *************************************************************************************************/
+  13          static U8 button_key0_read(void)
+  14          {
+  15   1        if(IO_KEY_ON == 0)
+  16   1        {
+  17   2      //    IO_Error_4 = 1;
+  18   2          return 0xfe;//这边的算法是按位来处理的，这样的话可以有8个按键
+  19   2        }
+  20   1        else
+  21   1        {
+  22   2      //    IO_Error_4 = 0;
+  23   2          return 0xff;
+  24   2        }
+  25   1        //return  (IO_KEY_ON&&0x01);//最低位就代表了IO_KEY_ON
+  26   1      }
+  27          
+  28          /*************************************************************************************************
+  29          * 函数名: Key_Read
+  30          * 参  数: 
+  31          * 返回值: 无
+  32          * 作  用: 每20ms读取一次
+  33          *************************************************************************************************/
+  34          U8 xdata Trg = 0;
+  35          U8 xdata Cont = 0;
+  36          static void Key_Read(void)
+  37          {
+  38   1        U8 xdata ReadData ;
+  39   1        ReadData = button_key0_read()^0xff;//读取i/o口的值
+  40   1        Trg = ReadData&(ReadData^Cont);// 用来计算触发变量的，代表触发
+  41   1        Cont = ReadData;//用来计算连续变量
+  42   1      #if debug
+                  printf("\n key ============ReadData =%bx,Trg=%bx,Cont=%bx \n",ReadData,Trg,Cont);    
+              #endif
+  45   1      }
+  46          //三种情况 
+  47          //异或0xff是取反
+  48          //1 没有按键的时候button_key0_read= 0xff 默认按键是高电平0xff ;ReadData = 0;                      Trg = 0;         
+             -              Cont = 0;
+  49          //2 第一个按下键    button_key0_read= 0xfe                       ReadData = 0xfe^0x0ff = 0x01;      Trg = 0x01&(0x0
+             -1^0) =0x01 ;    Cont = 0x01
+  50          //3 按着不松手                                                   ReadData = 0x01 ;                  Trg = 0x01&(0x01^0x01) = 0;   Cont =
+             - 0x01;
+  51          //只要按键不松开，Trg这个值就是0，Cont =0xff；
+C51 COMPILER V9.52.0.0   FUNCKEY                                                           10/24/2019 11:21:08 PAGE 2   
+
+  52          
+  53          /*************************************************************************************************
+  54          * 函数名: Key_Proc
+  55          * 参  数: 
+  56          * 返回值: 无
+  57          * 作  用: //按键长按多少秒
+  58          *************************************************************************************************/
+  59          U8 xdata cnt_shake = 0;
+  60          U8 xdata KEY_State = 0;
+  61          U8 xdata Once_key_flag = 0;
+  62          static void Key_Proc(void)
+  63          {
+  64   1        
+  65   1        //如果输出mos是0的话，那么就不执行pwm的切换了
+  66   1        //if((bDSGMOS != 0)&&(IO_DSG_MOS == 0))//1是不放电,0是允许放电
+  67   1        {
+  68   2          //0x01是8个按钮最后一位
+  69   2          if(Trg&0x01)//key0按了一下和Trg与就相当于按了一次，如果没有松开的话和Cont与就是长按判断
+  70   2          {
+  71   3      #if debug
+                  printf("\n !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!  \n");    
+              #endif
+  74   3            //切换档位  在这里面定义标志位就行了
+  75   3            switch(KEY_State)
+  76   3            {
+  77   4              case 0:
+  78   4      #if debug
+                  printf("\n key ======================第1档位  \n");    
+              #endif
+  81   4                //    PWM_Output(PWM30Percent);
+  82   4                break;
+  83   4              case 1:
+  84   4      #if debug
+                  printf("\n key ======================第2档位  \n");    
+              #endif
+  87   4                //    PWM_Output(PWM60Percent);
+  88   4                break;
+  89   4              case 2:
+  90   4      #if debug
+                  printf("\n key ======================第3档位  \n");    
+              #endif
+  93   4              //      PWM_Output(PWM100Percent);
+  94   4                break;
+  95   4              case 3:
+  96   4      #if debug
+                  printf("\n key ======================第0档位1  \n");    
+              #endif
+  99   4              //      PWM_Output(PWM0Percent);
+ 100   4                break;
+ 101   4              default:
+ 102   4      #if debug
+                  printf("\n key ======================第0档位2  \n");    
+              #endif
+ 105   4              //      PWM_Output(PWM0Percent);
+ 106   4                break;
+ 107   4      
+ 108   4            }
+ 109   3            if(++KEY_State>3)
+ 110   3            {
+ 111   4              KEY_State = 0;
+ 112   4            }
+ 113   3          }
+C51 COMPILER V9.52.0.0   FUNCKEY                                                           10/24/2019 11:21:08 PAGE 3   
+
+ 114   2        }
+ 115   1      //  else
+ 116   1      //  {
+ 117   1      //#if debug
+ 118   1      //    printf("\n key =======================第0档位3  \n");    
+ 119   1      //#endif
+ 120   1      //    //PWM_Output(PWM0Percent);
+ 121   1      //  }
+ 122   1        //可能还要加入保存KEY_State的程序，先不动
+ 123   1        
+ 124   1        
+ 125   1        
+ 126   1        if((!Trg)&Cont&0x01)
+ 127   1        {
+ 128   2          cnt_shake++;//开始计时
+ 129   2        }
+ 130   1        else
+ 131   1        {
+ 132   2          cnt_shake = 0;
+ 133   2        }
+ 134   1          
+ 135   1        if(cnt_shake >= 3)//80)//25m一次循环的话，2s就是
+ 136   1        {
+ 137   2      #if debug
+                  printf("\n key===================按键长按了2s了====================== \n");    
+              #endif
+ 140   2          //按键按两秒以上  ，进入pd模式
+ 141   2          MCU_Short_Clean();
+ 142   2        //  bPDFlg = 1;//进入掉电模式
+ 143   2        }
+ 144   1      
+ 145   1      
+ 146   1      }
+ 147          /*************************************************************************************************
+ 148          * 函数名: Scan_key
+ 149          * 参  数: 按键功能选择
+ 150          * 返回值: 无
+ 151          * 作  用: 
+ 152          *************************************************************************************************/
+ 153          void Scan_key(void)
+ 154          {
+ 155   1        Key_Read();
+ 156   1        Key_Proc();
+ 157   1      }
+ 158          
+ 159          
+ 160          
+ 161          
+ 162          
+ 163          
+ 164          
+ 165          
+ 166          
+ 167          
+ 168          
+ 169          
+ 170          
+ 171          
+ 172          
+ 173          #if 0
+              switch (Key_State)
+                      {
+C51 COMPILER V9.52.0.0   FUNCKEY                                                           10/24/2019 11:21:08 PAGE 4   
+
+                          //"First capture key" state
+                          case 0:
+              
+                              if(Key_press != 0)
+                              {
+                                os_printf("Key_State = %x\n",Key_State);
+                                Key_Prev = Key_press;
+                                  Key_State = 1;
+                              }
+                  
+                              break;
+                              
+                              //"Capture valid key" status
+                          case 1:
+                              if(Key_press == Key_Prev)
+                              {
+                                os_printf("Key_State = %x\n",Key_State);
+                                Key_State = 2;
+                                  Key_return= Key_Prev | KEY_DOWN;//??????????????
+                              }
+                              else
+                              {
+                                  //Button lift, jitter, no response button
+                                  Key_State = 0;
+                              }
+                              break;
+                              
+                              //"Capture long press" status
+                          case 2:
+                            //?????????????????????????????????????????turn ???0???
+                              if(Key_press != Key_Prev)
+                              {
+                                os_printf("Key_press != Key_Prev  Key_State = %x\n",Key_State);
+                                Key_State = 0;
+                                  Key_LongCheck = 0;
+                                  Key_return = Key_Prev | KEY_UP; //?????
+                                  return Key_return;
+                              }
+                  
+                              if(Key_press == Key_Prev)
+                              {
+                                os_printf("Key_press == Key_Prev  Key_State = %x\n",Key_State);
+                                Key_LongCheck++;
+                                  if(Key_LongCheck >= (PRESS_LONG_TIME / DEBOUNCE_TIME))    //??????????????????3S (????
+             -??????????????30MS * 100)
+                                  {
+                                      Key_LongCheck = 0;
+                                      Key_State = 3;
+                                      Key_return= Key_press |  KEY_LONG;
+                                      return Key_return;
+                                  }
+                              }
+                              break;
+                              
+                              //"Restore the initial" state
+                          case 3:
+                              if(Key_press != Key_Prev)
+                              {
+                                os_printf("Key_press != Key_Prev  Key_State = %x\n",Key_State);
+                                Key_State = 0;
+                              }
+                              break;
+C51 COMPILER V9.52.0.0   FUNCKEY                                                           10/24/2019 11:21:08 PAGE 5   
+
+                      }
+              
+              
+              #endif
+ 241          
+ 242          
+ 243          
+ 244          
+ 245          
+ 246          
+ 247          
+ 248          
+ 249          
+ 250          
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    111    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =      5    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

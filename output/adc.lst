@@ -1,0 +1,222 @@
+C51 COMPILER V9.52.0.0   ADC                                                               10/24/2019 11:21:07 PAGE 1   
+
+
+C51 COMPILER V9.52.0.0, COMPILATION OF MODULE ADC
+OBJECT MODULE PLACED IN .\output\adc.obj
+COMPILER INVOKED BY: C:\Program Files (x86)\keil 51\C51\BIN\C51.EXE roidmi\src\adc.c LARGE OPTIMIZE(7,SPEED) BROWSE INCD
+                    -IR(.\header;.\roidmi\inc) DEBUG OBJECTEXTEND PRINT(.\output\adc.lst) TABS(2) OBJECT(.\output\adc.obj)
+
+line level    source
+
+   1          #include "System.h"
+   2          #include "AfeMtp.h"
+   3          
+   4          
+   5          /*************************************************************************************************
+   6          * 函数名: ADC_init
+   7          * 参  数: 无
+   8          * 返回值: 无
+   9          * 作  用: 
+  10          *************************************************************************************************/
+  11          void ADC_init(void)
+  12          {
+  13   1      /********ADC ini********/
+  14   1        //ADC的时钟周期                采样时间选择
+  15   1        //[4：7] :0000 1个系统周期    [3:0] 0000 采样时间为2个ad
+  16   1        //        1010 32个系统周期          1111 15个Tad
+  17   1        //        1111 192个系统周期
+  18   1        ADT = 0xAF;//这边配置和21一样
+  19   1        
+  20   1        //ADCON1 
+  21   1        //ADON(允许位) ADCIF（ad转换完成标志位） REFC（选择基准电压）  XTRGEN（外部中断2启动序列转换控制）  PCATRG
+             -EN  PWMTRGEN  TIMTRGEN  GO/DONE
+  22   1        //  1            0                        1->0                  0                                     0          0        0        0
+  23   1        ADCON1 = 0x80;
+  24   1        //ADCON2 
+  25   1        //VBG(1.2V基准源) GRP[2:0](转换通道数量，暂定4个)  -  TGAP[2:0](一个通道转换完毕到下一个通道开始的间隔)
+  26   1        // 0                011                            0   001 （无等待时间）2个ADC周期
+  27   1        ADCON2 = 0x31;
+  28   1        //SEQCON
+  29   1        //ALR(高4位存放在ADDxH)- - - - REG[2:0]（缓存器地址选择）
+  30   1        // 1                   0 0 0 0   011（ADD0L和ADD0H）
+  31   1        //SEQCON = 0x83;
+  32   1        //ADCH1 通道配置寄存器
+  33   1        //使用通道0和通道1
+  34   1        //0000 0011  AN 0,3,5,8通道
+  35   1        ADCH1 = 0x29;              // 0010 1001
+  36   1        ADCH2 = 0x01;                 //    001   按照优先级存储到 SEQCH 0~3,所以优先级高的是5 ，然后是3，然后是0，然后是8
+  37   1        //通道寄存器选择
+  38   1        //SEQCHX
+  39   1      //  SEQCHx = 0x0000;//(CH0)切换的时候用 默认是通道0
+  40   1      
+  41   1      }
+  42          /*************************************************************************************************
+  43          * 函数名: GetAD_Value
+  44          * 参  数: 通道数
+  45          * 返回值: 无
+  46          * 作  用: 
+  47          *************************************************************************************************/
+  48          
+  49          //static U16 GetAD_Value(U8 ucAdcChannal)
+  50          //{
+  51          //    U16 uiConvertValue = 0x00; //变换后的值
+  52          //    
+  53          //    SEQCON = 0x80;//(0x80 | ucAdcChannal);//0,1,2,3
+C51 COMPILER V9.52.0.0   ADC                                                               10/24/2019 11:21:07 PAGE 2   
+
+  54          //    nop_();
+  55          //    SEQCHx = ucAdcChannal;
+  56          //  
+  57          //    _nop_();
+  58          //    _nop_();
+  59          //  //开启转换(这边没有用到数字比较功能)
+  60          //    ADCON1 |= 0x01;           //启动AD转换
+  61          //  //等待AD转换完成（10位数值）  
+  62          //    while(ADCON1&0x01); 
+  63          //  //ADD0L A7 A6 A5 A4 A3 A2 A1 A0  ADD0H是 A11 A10 A9 A8  
+  64          //    uiConvertValue |= ((ADDxH&0x0f)<<8);    
+  65          //    _nop_();
+  66          //    uiConvertValue |= ADDxL;  
+  67          //#if 0
+  68          //    TI = 0;
+  69          //    TI = 1; 
+  70          //    printf("\n ADDxH = %bd ,ADDxL =%bd ,uiConvertValue = %hd\n",ADDxH,ADDxL,(uiConvertValue&0x0fff));    
+  71          //#endif  
+  72          //  
+  73          //    return(uiConvertValue&0x0fff);
+  74          //}
+  75          
+  76          //参考
+  77          U16 GetAD_Value(U8 ucAdcChannal)
+  78          {
+  79   1        U16 uiConvertValue = 0x00;
+  80   1        
+  81   1          ADT = 0x9A;         //24uS
+  82   1          ADCH1 = 0x29;           //??CH1/5/6   0010 1001   //AN0,AN3,AN5,AN8
+  83   1          ADCH2 = 0x01;                       //0x62  0110 0010
+  84   1          SEQCON = (0x90 | ucAdcChannal);  //1001 
+  85   1        //ADCON2 
+  86   1        //VBG(1.2V基准源) GRP[2:0](转换通道数量，暂定4个)  -  TGAP[2:0](一个通道转换完毕到下一个通道开始的间隔)
+  87   1        // 0                011                            0   001 （无等待时间）2个ADC周期
+  88   1      
+  89   1          ADCON2 = 0x31;  //0101 SEQCH0-SEQCH5
+  90   1          _nop_();
+  91   1          _nop_();
+  92   1          SEQCHx &= 0x00; 
+  93   1          SEQCHx |= ucAdcChannal;
+  94   1          ADCON1 = 0x80;
+  95   1          _nop_();
+  96   1          _nop_();
+  97   1          _nop_();
+  98   1          ADCON1 |= 0x01;
+  99   1          while(ADCON1&0x01){_nop_();}
+ 100   1          ADCON1 &= ~(0xc0);            //?ADC Flag,???ADC????   1100 0000
+ 101   1          SEQCON = (0x80 | ucAdcChannal);
+ 102   1          uiConvertValue = ((U16)ADDxH<<8) | ADDxL; //get the data of ADC
+ 103   1        
+ 104   1        return(uiConvertValue);
+ 105   1      }
+ 106          
+ 107          
+ 108          
+ 109          /*************************************************************************************************
+ 110          * 函数名: paixu
+ 111          * 参  数: 数据地址 长度
+ 112          * 返回值: 无
+ 113          * 作  用: 
+ 114          *************************************************************************************************/
+ 115          //从小到大排序
+C51 COMPILER V9.52.0.0   ADC                                                               10/24/2019 11:21:07 PAGE 3   
+
+ 116          static void paixu(U16 arr[],U8 len)//从头部开始，相邻元素之间做比较
+ 117          {
+ 118   1        int i,j,t;
+ 119   1          for(i=0;i<len-1;i++)
+ 120   1            for(j=0;j<len-1-i;j++)
+ 121   1            {
+ 122   2              if(arr[j]>arr[j+1])
+ 123   2              {
+ 124   3                t=arr[j];arr[j]=arr[j+1];arr[j+1]=t;
+ 125   3              }
+ 126   2            }
+ 127   1      }
+ 128          
+ 129          
+ 130          
+ 131          /*********************************************************
+ 132          函数名: uint ADCRead(uchar channel)
+ 133          描  述: 中位置平均滤波法(防脉冲干扰平均滤波）
+ 134                  ADC转换程序，转换18次，去掉最小值和最大值，求16次平均值,
+ 135          输入值: channel—模拟输入通道 
+ 136          输出值: 无
+ 137          返回值: 滤波后的值
+ 138          **********************************************************/
+ 139          U16 ADCRead(U8 ucAdcChannal)
+ 140          {
+ 141   1      
+ 142   1        U16 xdata sum=0, ad_temp = 0;   
+ 143   1        U16 xdata ad_val[18]={0,};
+ 144   1        U8 i;
+ 145   1        U16  adc_data;
+ 146   1      
+ 147   1        for(i=0;i<18;i++) 
+ 148   1       {    
+ 149   2         ad_val[i] = GetAD_Value(ucAdcChannal);   
+ 150   2         
+ 151   2        //Delay1ms(100);
+ 152   2      #if 0
+                 TI = 0;
+                 TI = 1;
+                 printf("ad_val[%bd] = %hd \n",i, ad_val[i] );
+              #endif
+ 157   2       }
+ 158   1        //从小到大排序
+ 159   1        paixu(ad_val,18);
+ 160   1        for(i=1;i<17;i++) 
+ 161   1       {    
+ 162   2         sum += ad_val[i];//去头去尾
+ 163   2       }
+ 164   1        adc_data = sum>>4;//除以16
+ 165   1      
+ 166   1        return adc_data;
+ 167   1      }
+ 168          
+ 169          
+ 170          
+ 171          /*******************************************20190925新增地刷电流检测**************************************
+             -*/
+ 172          
+ 173          
+ 174          
+ 175          
+ 176          
+C51 COMPILER V9.52.0.0   ADC                                                               10/24/2019 11:21:07 PAGE 4   
+
+ 177          
+ 178          
+ 179          
+ 180          
+ 181          
+ 182          
+ 183          
+ 184          
+ 185          
+ 186          
+ 187          
+ 188          
+ 189          
+ 190          
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    499    ----
+   CONSTANT SIZE    =     36    ----
+   XDATA SIZE       =   ----      48
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

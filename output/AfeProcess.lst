@@ -1,0 +1,1403 @@
+C51 COMPILER V9.52.0.0   AFEPROCESS                                                        10/24/2019 15:23:01 PAGE 1   
+
+
+C51 COMPILER V9.52.0.0, COMPILATION OF MODULE AFEPROCESS
+OBJECT MODULE PLACED IN .\output\AfeProcess.obj
+COMPILER INVOKED BY: C:\Program Files (x86)\keil 51\C51\BIN\C51.EXE code\AfeProcess.c LARGE OPTIMIZE(7,SPEED) BROWSE INC
+                    -DIR(.\header;.\roidmi\inc) DEBUG OBJECTEXTEND PRINT(.\output\AfeProcess.lst) TABS(2) OBJECT(.\output\AfeProcess.obj)
+
+line level    source
+
+   1          /********************************************************************************
+   2          Copyright (C), Sinowealth Electronic. Ltd.
+   3          Author:   andyliu
+   4          Version:  V0.0
+   5          Date:     2014/05/30
+   6          History:
+   7            V0.0    2014/05/30     Preliminary
+   8          ********************************************************************************/
+   9          #include "system.h"
+  10          #include "AfeMtp.h"
+  11          #include "Calibrate.h"
+  12          
+  13          /*******************************************************************************
+  14          Function: VolProtect(void)
+  15          Description:  
+  16          Input:    
+  17          Output: 
+  18          Others:
+  19          *******************************************************************************/
+  20          void VolProtect(void)
+  21          {
+  22   1        if(!bHV)
+  23   1        {
+  24   2          if(uiCellVmax > E2uiOVvol) //4.25
+  25   2          {   
+  26   3            if(++ucOVcnt >= OV_DELAY_CNT)//40*25 = 1000mS
+  27   3            {
+  28   4              bHV = 1;
+  29   4              ucOVcnt = 0;
+  30   4              ucOVRcnt = 0;
+  31   4            }
+  32   3          }
+  33   2          else if(uiCellVmax < E2uiOVRvol) //< 4.15
+  34   2          {
+  35   3            if(ucOVcnt > 0)
+  36   3            {
+  37   4              ucOVcnt--;
+  38   4            }
+  39   3          }
+  40   2        }
+  41   1        else
+  42   1        {
+  43   2          if(uiCellVmax < E2uiOVRvol)//»Ö¸´ < 4.15v
+  44   2          {     
+  45   3            if(++ucOVRcnt >= OVR_DELAY_CNT)
+  46   3            {
+  47   4              bHV = 0;
+  48   4              ucOVcnt = 0;
+  49   4              ucOVRcnt = 0;
+  50   4            }
+  51   3          }
+  52   2          else if(uiCellVmax > E2uiOVvol) //> 4.25v
+  53   2          {
+  54   3            if(ucOVRcnt > 0)
+C51 COMPILER V9.52.0.0   AFEPROCESS                                                        10/24/2019 15:23:01 PAGE 2   
+
+  55   3            {
+  56   4              ucOVRcnt--;
+  57   4            }
+  58   3          }
+  59   2        }
+  60   1      
+  61   1        if(!bUV)
+  62   1        {
+  63   2          if(uiCellVmin < E2uiUVvol) //ÅÐ¶ÏÓÐÃ»ÓÐÇ·Ñ¹ÁË//< 2.7v
+  64   2          {   
+  65   3            if(++ucUVcnt >= UV_DELAY_CNT)
+  66   3            {
+  67   4              bUV = 1;
+  68   4              ucUVcnt = 0;
+  69   4              ucUVRcnt = 0;
+  70   4      
+  71   4              bChkChgerFlg = 1;//Ç·Ñ¹µÄ»°Òª¼ì²â³äµçÆ÷
+  72   4              bChgerConectFlg = 0;
+  73   4              ucChgerCnt = 0;
+  74   4              REG.AFESCONF1 |= 0x01;//¿ªÆô³äµçÆ÷¼ì²â
+  75   4              TWIWriteAFE(AFE_SCONF1, &REG.AFESCONF1);  //Ê¹ÄÜ³äµçÆ÷¼ì²â
+  76   4            }
+  77   3          }
+  78   2          else if(uiCellVmin > E2uiUVRvol)//> 3v
+  79   2          {
+  80   3            if(ucUVcnt > 0)
+  81   3            {
+  82   4              ucUVcnt--;
+  83   4            }
+  84   3          }
+  85   2        }
+  86   1        else
+  87   1        {
+  88   2          if(uiCellVmin > E2uiUVRvol)//3000
+  89   2          {     
+  90   3            if(++ucUVRcnt >= UVR_DELAY_CNT)
+  91   3            {
+  92   4              bUV = 0;
+  93   4              ucUVcnt = 0;
+  94   4              ucUVRcnt = 0;
+  95   4            }
+  96   3          }
+  97   2          else if(uiCellVmin < E2uiUVvol)//2700
+  98   2          {
+  99   3            if(ucUVRcnt > 0)
+ 100   3            {
+ 101   4              ucUVRcnt--;
+ 102   4            }
+ 103   3          }
+ 104   2        }
+ 105   1      #if debug
+                  printf("\n VolProtect(void) : bUV=%x,bHV=%x,\n",((uiBatStatus&0x0002)>>1),(uiBatStatus&0x0001));   
+              #endif  
+ 108   1      }
+ 109          
+ 110          
+ 111          /*******************************************************************************
+ 112          Function: TempeProtect(void)
+ 113          Description:  
+ 114          Input:    
+ 115          Output: 
+ 116          Others:
+C51 COMPILER V9.52.0.0   AFEPROCESS                                                        10/24/2019 15:23:01 PAGE 3   
+
+ 117          *******************************************************************************/
+ 118          void TempeProtect(void)               //TempNum=0, Support one temperature 
+ 119          {
+ 120   1        if(!bOTC)//³äµç¸ßÎÂ
+ 121   1        {
+ 122   2          if(uiTempeMax > E2uiTempOTC) //50
+ 123   2          {
+ 124   3            if(++ucOTCcnt >= TEMPE_DELAY_CNT) //120*25 3s
+ 125   3            {
+ 126   4              bOTC = 1;
+ 127   4              ucOTCcnt = 0;
+ 128   4              ucOTCRcnt = 0;
+ 129   4            }
+ 130   3          }
+ 131   2          else if(uiTempeMax < E2uiTempOTCR)//E2uiTempOTCRÓ¦¸ÃÒª±ÈE2uiTempOTCÉÔÎ¢µÍµã£¬ÒòÎª»Ø¸´ÎÂ¶ÈÒªµÍµã 45
+ 132   2          {
+ 133   3            if(ucOTCcnt > 0)
+ 134   3            {
+ 135   4              ucOTCcnt--;
+ 136   4            }
+ 137   3          }
+ 138   2        }
+ 139   1        else
+ 140   1        {
+ 141   2          if(uiTempeMax < E2uiTempOTCR) //45 
+ 142   2          {
+ 143   3            if(++ucOTCRcnt >= TEMPER_DELAY_CNT)
+ 144   3            {
+ 145   4              bOTC = 0;
+ 146   4              ucOTCcnt = 0;
+ 147   4              ucOTCRcnt = 0;
+ 148   4            }
+ 149   3          }
+ 150   2          else if(uiTempeMax > E2uiTempOTC)
+ 151   2          {
+ 152   3            if(ucOTCRcnt > 0)
+ 153   3            {
+ 154   4              ucOTCRcnt--;
+ 155   4            }
+ 156   3          }
+ 157   2        }
+ 158   1      
+ 159   1        if(!bUTC)
+ 160   1        {
+ 161   2          if(uiTempeMin < E2uiTempUTC) //0
+ 162   2          {
+ 163   3            if(++ucUTCcnt >= TEMPE_DELAY_CNT)
+ 164   3            {
+ 165   4              bUTC = 1;
+ 166   4              ucUTCcnt = 0;
+ 167   4              ucUTCRcnt = 0;
+ 168   4            }
+ 169   3          }
+ 170   2          else if(uiTempeMin > E2uiTempUTCR)//5
+ 171   2          {
+ 172   3            if(ucUTCcnt > 0)
+ 173   3            {
+ 174   4              ucUTCcnt--;
+ 175   4            }
+ 176   3          }
+ 177   2        }
+ 178   1        else
+C51 COMPILER V9.52.0.0   AFEPROCESS                                                        10/24/2019 15:23:01 PAGE 4   
+
+ 179   1        {
+ 180   2          if(uiTempeMin > E2uiTempUTCR)//5
+ 181   2          {
+ 182   3            if(++ucUTCRcnt >= TEMPER_DELAY_CNT)
+ 183   3            {
+ 184   4              bUTC = 0;
+ 185   4              ucUTCcnt = 0;
+ 186   4              ucUTCRcnt = 0;
+ 187   4            }
+ 188   3          }
+ 189   2          else if(uiTempeMin < E2uiTempUTC)//0
+ 190   2          {
+ 191   3            if(ucUTCRcnt > 0)
+ 192   3            {
+ 193   4              ucUTCRcnt--;
+ 194   4            }
+ 195   3          }
+ 196   2        }
+ 197   1      
+ 198   1        if(!bOTD)
+ 199   1        {
+ 200   2          if(uiTempeMax > E2uiTempOTD)//70  73
+ 201   2          {
+ 202   3            if(++ucOTDcnt >= TEMPE_DELAY_CNT)
+ 203   3            {
+ 204   4      #if 0
+                  printf("\n bOTD = 1£ºÍâ²¿uiTempeMax=%d,uiTempeMin=%d \n",uiTempeMax,uiTempeMin);    
+              #endif      
+ 207   4              bOTD = 1;
+ 208   4              ucOTDcnt = 0;
+ 209   4              ucOTDRcnt = 0;
+ 210   4            }
+ 211   3          }
+ 212   2          else if(uiTempeMax < E2uiTempOTDR)
+ 213   2          {
+ 214   3            if(ucOTDcnt > 0)
+ 215   3            {
+ 216   4              ucOTDcnt--;
+ 217   4            }
+ 218   3          }
+ 219   2        }
+ 220   1        else
+ 221   1        {
+ 222   2          if(uiTempeMax < E2uiTempOTDR) //3311
+ 223   2          {
+ 224   3            if(++ucOTDRcnt >= TEMPER_DELAY_CNT)
+ 225   3            {
+ 226   4      #if 0
+                  printf("\n bOTD = 0£ºÍâ²¿uiTempeMax=%d,uiTempeMin=%d \n",uiTempeMax,uiTempeMin);    
+              #endif    
+ 229   4              bOTD = 0;
+ 230   4              ucOTDcnt = 0;
+ 231   4              ucOTDRcnt = 0;
+ 232   4            }
+ 233   3          }
+ 234   2          else if(uiTempeMax > E2uiTempOTD)//70
+ 235   2          {
+ 236   3            if(ucOTDRcnt > 0)
+ 237   3            {
+ 238   4              ucOTDRcnt--;
+ 239   4            }
+ 240   3          }
+C51 COMPILER V9.52.0.0   AFEPROCESS                                                        10/24/2019 15:23:01 PAGE 5   
+
+ 241   2        }
+ 242   1      
+ 243   1        if(!bUTD)
+ 244   1        {
+ 245   2          if(uiTempeMin < E2uiTempUTD)//-10
+ 246   2          {
+ 247   3            if(++ucUTDcnt >= TEMPE_DELAY_CNT)
+ 248   3            {
+ 249   4              bUTD = 1;
+ 250   4              ucUTDcnt = 0;
+ 251   4              ucUTDRcnt = 0;
+ 252   4            }
+ 253   3          }
+ 254   2          else if(uiTempeMin > E2uiTempUTDR)//-5
+ 255   2          {
+ 256   3            if(ucUTDcnt > 0)
+ 257   3            {
+ 258   4              ucUTDcnt--;
+ 259   4            }
+ 260   3          }
+ 261   2        }
+ 262   1        else
+ 263   1        {
+ 264   2          if(uiTempeMin > E2uiTempUTDR)//-5
+ 265   2          {
+ 266   3            if(++ucUTDRcnt >= TEMPER_DELAY_CNT)
+ 267   3            {
+ 268   4              bUTD = 0;
+ 269   4              ucUTDcnt = 0;
+ 270   4              ucUTDRcnt = 0;
+ 271   4            }
+ 272   3          }
+ 273   2          else if(uiTempeMin < E2uiTempUTD)//-10
+ 274   2          {
+ 275   3            if(ucUTDRcnt > 0)
+ 276   3            {
+ 277   4              ucUTDRcnt--;
+ 278   4            }
+ 279   3          }
+ 280   2        }
+ 281   1      #if debug
+                  printf("\n TempeProtect(void) :bUTD=%x,bUTC=%x,bOTD=%x,bOTC=%x \n",((uiBatStatus&0x0800)>>11),((uiBatSta
+             -tus&0x0400)>>10),((uiBatStatus&0x0200)>>9),((uiBatStatus&0x0100)>>8));   
+              #endif  
+ 284   1      }
+ 285          
+ 286          
+ 287          /*******************************************************************************
+ 288          Function: ChkMosStatus(void)
+ 289          Description:  
+ 290          Input:    
+ 291          Output: 
+ 292          Others:
+ 293          *******************************************************************************/
+ 294          void ChkMosStatus(void)
+ 295          {
+ 296   1          U8 bChgerConectFlg_test = 0x00;
+ 297   1          bCHGMOS = 1;
+ 298   1          bDSGMOS = 1;
+ 299   1      //µçÐ¾>4.4v
+ 300   1        if(bAFE_OV || bCTO)//¶ÏÏß±£»¤£¬ºÍÓ²¼þ¹ý³å                         
+ 301   1        {
+C51 COMPILER V9.52.0.0   AFEPROCESS                                                        10/24/2019 15:23:01 PAGE 6   
+
+ 302   2          bCHGMOS = 0;
+ 303   2        }
+ 304   1        //·Åµç×´Ì¬£º
+ 305   1        //(1)µ¥ÌåÇ·Ñ¹¼ì²â(µÍÓÚ×îµÍµçÑ¹ ´¥·¢)         bUV
+ 306   1        //(2)µ¥Ìå¼äÑ¹²î¼ì²â£¨µ¥Ìå¼äÑ¹²î>0.3V ´¥·¢£©  OK
+ 307   1        //(3)Èý¶Ë±£ÏÕË¿ÊÇ·ñÈÛ¶Ï£¨ÈÛ¶Ï£©              OK
+ 308   1        //(4)·ÅµçµçÁ÷¼ì²â£¨¹ýÁ÷£¬¶ÌÂ·£©              bAFE_SC
+ 309   1        //(5)¸ßÎÂ¼ì²â£¨³¬ÎÂ ´¥·¢£©                   bOTD
+ 310   1        //(6)µÍÎÂ¼ì²â£¨³¬ÎÂ ´¥·¢£©                   bUTD
+ 311   1        //                                           »¹Ê£: bOCD ||(bFD&&bDSGEnd) || bLoadConectFlg || bCTO
+ 312   1        //uiPackConfig³õÊ¼»¯:00101101 00110111
+ 313   1      //·Åµç×´Ì¬ÏÂµÄ´íÎó±êÖ¾                         //·Åµç½ØÖ¹ÇÒ·Åµç½ØÖ¹¹Ø±Õ·Åµçmosfet   ³õÊ¼×´Ì¬bLoadConectFlg
+             - = 0£¬ µç³Ø×´Ì¬¸Õbstatus =0¸Õ¿ªÊ¼ËùÒÔbCTO = 0
+ 314   1                                                                      //bLoadConectFlgÊÇ1µÄ»°¾Í»á±£»¤£¬bLoadConectFlgÖ»ÓÐÔÚ¼ì²â·¢Éú·ÅµçµÄ´íÎó×´Ì
+             -¬ºó£¬¼ì²â¸ºÔØÒÀÈ»ºó¸ºÔØÁ¬½Ó£¬²Å»áÖÃ1
+ 315   1        if( bOTD || bUTD || bUV || bOCD || bOCD2 || bAFE_SC || (bFD&&bDSGEnd) || bLoadConectFlg || bCTO)
+ 316   1        {                                                               //ºóÆÚÒòÎª¶ÌÂ·´¥·¢bLoadConectFlgµÄ¿ÉÄÜ»áÈ¥³ýÕâÒ»Ïî£¬²»ÓÃ¼ì²â¸ºÔØ£¬ÓÉ²åÈë
+             -ÊÊÅäÆ÷»½ÐÑ
+ 317   2          bDSGMOS = 0;   //·Åµçmos¹Ø±Õ
+ 318   2      //    PWM2CON &= ~0x01; //pwm½ûÖ¹Êä³ö 
+ 319   2      //    DSG1PWM = 0;
+ 320   2        }
+ 321   1        else
+ 322   1        {
+ 323   2          //tomi
+ 324   2          //Ìí¼Ó·ÅµçÕý³£µÄ²Ù×÷
+ 325   2          
+ 326   2      //    DSG1PWM = 1;
+ 327   2      //    if(ucDsgingSpeed != 2)
+ 328   2      //    {
+ 329   2      //      PWM2CON |= 0x01;
+ 330   2      //    }
+ 331   2        }
+ 332   1         //packstatus³õÊ¼×´Ì¬¶¼ÊÇ0
+ 333   1          if(!bDSGING)//²»ÊÇ·Åµç×´Ì¬
+ 334   1          {
+ 335   2              //(1)µ¥Ìå¹ýÑ¹¼ì²â (´óÓÚ4.2V´¥·¢±£»¤)                  bHV
+ 336   2              //(2)µ¥Ìå¼äÑ¹²î¼ì²â£¨µ¥Ìå¼äÑ¹²î>0.3V ´¥·¢£©           OK
+ 337   2              //(3)Èý¶Ë±£ÏÕË¿ÊÇ·ñÈÛ¶Ï£¨ÈÛ¶Ï£©                       OK
+ 338   2              //(4)³äµçÆ÷ÒÑÁ¬½Ó£¨AFE³äµçÆ÷¼ì²â£©                    ´ý¶¨
+ 339   2              //(5)³äµçÆ÷µçÑ¹ÔÚÕý³£·¶Î§£¨34.2¡À0.5V£©               OK    Input_vol_judge();//ÅÐ¶Ï³äµçÆ÷µÄ³äµçµçÑ¹
+ 340   2              //(6)³äµçµçÁ÷¼ì²â£¨µçÁ÷Ð¡ÓÚ10ma ´¥·¢£©                ´ý¶¨£¬Õâ¸öÆäÊµ¾ÍÊÇbFC³äÂúÁË
+ 341   2              //(7)·ÅµçµçÁ÷¼ì²â£¨ÓÐ·ÅµçµçÁ÷ ´¥·¢£©!!!!!!!!!!!!!!!!  ´ý¶¨£¬ÒòÎªÒÑ¾­ÊÇ·Ç·Åµç×´Ì¬
+ 342   2              //(8)¸ßÎÂ¼ì²â£¨³¬ÎÂ ´¥·¢£©                            bOTC
+ 343   2              //(9)µÍÎÂ¼ì²â£¨³¬ÎÂ ´¥·¢£©                            bUTC
+ 344   2              //                                                    »¹Ê£:bOCC|| (bFC&&bCHGEnd)
+ 345   2              if(bOTC || bUTC || bHV || bOCC || (bFC&&bCHGEnd)) //·¢Éú¹ý±¨´í ³äµçÖÐ±¨´í             
+ 346   2              {
+ 347   3      #if debug
+                  printf("¹Ø±Õ³äµçmos1-----------\n");    
+              #endif
+ 350   3                bCHGMOS = 0;  //¹Ø±Õ³äµçmos
+ 351   3              }
+ 352   2          }
+ 353   1          //·Åµç¹ýÁ÷±£»¤£¬Ó²¼þ¶ÌÂ·±£»¤£¬¼ì²â±êÖ¾Î»ÊÇ1»¹ÓÐÒÑ¾­Á¬½Ó±êÖ¾Î»ÊÇ0
+ 354   1          //                                                      (bChkChgerFlg&&!bChgerConectFlg))
+ 355   1          if(bOCD || bOCD2 || bAFE_SC  || (bChkChgerFlg&&!bChgerConectFlg))//¼ì²â³äµçÊÇ·ñÓÐ³äµç£¬Ò²ÐèÒª¹Ø±ÕCmos
+ 356   1          {
+ 357   2      #if debug
+                  printf("¹Ø±Õ³äµçmos2-----------\n");    
+              #endif
+ 360   2                bCHGMOS = 0;//¹Ø±Õ³äµçmos
+C51 COMPILER V9.52.0.0   AFEPROCESS                                                        10/24/2019 15:23:01 PAGE 7   
+
+ 361   2          }
+ 362   1          
+ 363   1      #if (tempdebug|chargedebug|discurdebug)
+ 364   1          //×¢ÒâÕâ±ßµÍÎ»×Ö½Ú·ÅÇ°Ãæ£¬¸ßÎ»×Ö½Ú´æ´¢ÔÚºóÃ
+ 365   1          printf("\n µÍ8Î»£º0,bCTO=%x,bAFE_SC=%x,bAFE_OV=%xæ,bUTD=%x,bUTC=%x,bOTD=%x,bOTC=%x ¸ß8Î» 0,0,0,bOCD2=%x,
+             -bOCD=%x,bOCC=%x,bUV=%x,bHV=%x,\n",((uiBatStatus&0x4000)>>14),((uiBatStatus&0x2000)>>13),((uiBatStatus&0x1000)>>12),((uiB
+             -atStatus&0x0800)>>11),\
+ 366   1          ((uiBatStatus&0x0400)>>10),((uiBatStatus&0x0200)>>9),((uiBatStatus&0x0100)>>8),((uiBatStatus&0x0010)>>4)
+             -,((uiBatStatus&0x0008)>>3),((uiBatStatus&0x0004)>>2),((uiBatStatus&0x0002)>>1),(uiBatStatus&0x0001));   
+ 367   1      #endif  
+ 368   1      #if debug
+                  printf("\n bFD = %x,bFC= %x ,LoadConnet_FLG =%bd,bChgerConectFlg =%bd£¬bChkChgerFlg = %bd\n",((uiPackSta
+             -tus&0x0200)>>9),((uiPackStatus&0x0100)>>8),LoadConnet_FLG,(bChgerConectFlg_test|bChgerConectFlg),(bChgerConectFlg_test|b
+             -ChkChgerFlg));    
+              #endif 
+ 371   1      #if (tempdebug|chargedebug|discurdebug)
+ 372   1          printf("\n ChkMosStatus(void)uiPackStatus=%x,bCHGMOS=%x,bDSGMOS=%x \n",uiPackStatus,(uiPackStatus&0x0001
+             -),(uiPackStatus&0x0002)>>1);    
+ 373   1      #endif    
+ 374   1      }
+ 375          
+ 376          
+ 377          /*******************************************************************************
+ 378          Function: ControlMos(void)
+ 379          Description:  
+ 380          Input:    
+ 381          Output: 
+ 382          Others:
+ 383          *******************************************************************************/
+ 384          void ControlMos(void)
+ 385          {
+ 386   1          if(bCHGMOS)
+ 387   1          {
+ 388   2              REG.AFESCONF2 |= 0x01;   //³äµçmos¿ØÖÆÎ» ¿ªÆô
+ 389   2          }
+ 390   1          else
+ 391   1          {
+ 392   2              REG.AFESCONF2 &= ~0x01;    
+ 393   2          }
+ 394   1      
+ 395   1          if(bDSGMOS)
+ 396   1          {
+ 397   2              REG.AFESCONF2 |= 0x02;    //·ÅµçmosµÄ¿ªÆô
+ 398   2          }
+ 399   1          else
+ 400   1          {
+ 401   2              REG.AFESCONF2 &= ~0x02;    
+ 402   2          }
+ 403   1              
+ 404   1          //Èç¹û²ÎÊýÖµºÍÖ®Ç°Ò»Ñù¾Í²»ÔÚÐ´Èë
+ 405   1        if(REG.AFESCONF2 != AFESCONF2Bk)      //If the two variables of the same, is not written to AFE
+ 406   1        {
+ 407   2          AFESCONF2Bk = REG.AFESCONF2;
+ 408   2          TWIWriteAFE(AFE_SCONF2, &REG.AFESCONF2);            
+ 409   2        }
+ 410   1      
+ 411   1      
+ 412   1      }
+ 413          
+ 414          
+ 415          /*******************************************************************************
+ 416          Function: RecoveryOC(void)
+C51 COMPILER V9.52.0.0   AFEPROCESS                                                        10/24/2019 15:23:01 PAGE 8   
+
+ 417          Description:  
+ 418          Input:    
+ 419          Output: 
+ 420          Others:
+ 421          *******************************************************************************/
+ 422          void RecoveryOC(void)
+ 423          {
+ 424   1        if(bOCRC_EN)//¹ýÁ÷×Ô»Ö¸´Ê¹ÄÜ
+ 425   1        {
+ 426   2          if(bOCD || bAFE_SC|| bOCD2)//·Åµç¹ýÁ÷±£»¤±êÖ¾Î»,¶ÌÂ·±êÖ¾Î»
+ 427   2          {
+ 428   3            if(++uiOCDRcnt > OCDR_DELAY_CNT)//>400*25 =10s
+ 429   3            {
+ 430   4                     //Õâ±ß¿ÉÄÜÒª¼ÓÅÐ¶Ï
+ 431   4                      bChkLoadFlg = 0;
+ 432   4                      ucLoadRCnt = 0;    
+ 433   4                      uiOCDRcnt = 0;
+ 434   4                      bOCD = 0;
+ 435   4                      //by tomi
+ 436   4                      ucOCD2cnt = 0;
+ 437   4                      bOCD2 = 0;
+ 438   4                      if(bAFE_SC)
+ 439   4                      {
+ 440   5                          bAFE_SC = 0;
+ 441   5                          REG.AFESCONF1 |= 0x80;//Çå³ý±êÖ¾¼Ä´æÆ÷¸÷±£»¤±êÖ¾Î»
+ 442   5                          TWIWriteAFE(AFE_SCONF1, &REG.AFESCONF1);
+ 443   5                          REG.AFESCONF1 &= ~0x80;
+ 444   5                          TWIWriteAFE(AFE_SCONF1, &REG.AFESCONF1);
+ 445   5                      }
+ 446   4            }
+ 447   3          }
+ 448   2          //by tomi 
+ 449   2          if(bOCC | bAFE_OV)
+ 450   2          {     
+ 451   3            if(++uiOCCRcnt > OCCR_DELAY_CNT)
+ 452   3            {
+ 453   4              uiOCCRcnt = 0;
+ 454   4              bOCC = 0;
+ 455   4              //by tomi 
+ 456   4              bAFE_OV = 0;
+ 457   4              
+ 458   4              bChkChgerRFlg = 0;
+ 459   4              ucChgerRCnt = 0;
+ 460   4            }
+ 461   3          }
+ 462   2        }
+ 463   1      }
+ 464          
+ 465          
+ 466          /*******************************************************************************
+ 467          Function: CheckLoad(void)
+ 468          Description:  
+ 469          Input:    
+ 470          Output: 
+ 471          Others:
+ 472          *******************************************************************************/
+ 473          void CheckLoad(void)
+ 474          {
+ 475   1         U8 bLoadConectFlg_test = 0x00;
+ 476   1          if(!bChkLoadFlg)//¼ì²â¸ºÔØ±êÖ¾Î»Ã»ÓÐ¿ªÆô
+ 477   1          {
+ 478   2              if(bUV) //Ç·Ñ¹ÁË
+C51 COMPILER V9.52.0.0   AFEPROCESS                                                        10/24/2019 15:23:01 PAGE 9   
+
+ 479   2              {
+ 480   3                  bLoadConectFlg = 1;
+ 481   3                  bUVBkFlg = 1;
+ 482   3              }
+ 483   2              else if(bUVBkFlg && !bUV) //ÉÏ´ÎÇ·Ñ¹ÁË£¬Õâ´Î²»Ç·Ñ¹ÁË-¡·¶Ï¿ªmosºó²»Ç·Ñ¹ÁË£¬¾Í¿ªÊ¼¸ºÔØ¼ì²â
+ 484   2              {
+ 485   3                  bUVBkFlg = 0;
+ 486   3                  bChkLoadFlg = 1;
+ 487   3                  ucLoadRCnt = 0;
+ 488   3                  REG.AFESCONF1 |= 0x02; //¸ºÔØ¼ì²â
+ 489   3                  TWIWriteAFE(AFE_SCONF1, &REG.AFESCONF1);          //enable Load Detect  
+ 490   3              }
+ 491   2      
+ 492   2              if(bOCD || bAFE_SC ||bOCD2)//·Åµç¹ýÁ÷±£»¤±êÖ¾Î»£¬¶ÌÂ·±êÖ¾Î»
+ 493   2              {
+ 494   3                  bChkLoadFlg = 1;
+ 495   3                  bLoadConectFlg = 1; //Èç¹û¼ì²âÕâ¼¸¸ö´íÎóµ½ÁË»¹ÓÐ¸ºÔØÁ¬½Ó£¬¾Í¼ÌÐø¶Ï¿ªDmos
+ 496   3                  ucLoadRCnt = 0;
+ 497   3                  REG.AFESCONF1 |= 0x02;//¿ªÆô¸ºÔØ¼ì²â
+ 498   3                  TWIWriteAFE(AFE_SCONF1, &REG.AFESCONF1);  //Ê¹ÄÜ¸ºÔØ¼ì²â
+ 499   3              }
+ 500   2          }
+ 501   1          //Ö»ÓÐÔÚ¹Ø±Õ£¬bChkLoadFlgÊÇ1ÁË£¬ÇÒDmos¹Ø±ÕÁË£¬²ÅÄÜ¼ì²âÓÐÃ»ÓÐ¸ºÔØ
+ 502   1          else 
+ 503   1          {
+ 504   2              TWIReadAFE(AFE_BSTATUS, &REG.AFEBSTATUS);
+ 505   2              if((REG.AFEBSTATUS&0x02) == 0)//¸ºÔØÁ¬½Ó×´Ì¬Î» 1£º¸ºÔØÁ¬½Ó 0Î´Á¬½Ó¸ºÔØ
+ 506   2              {
+ 507   3                  if(++ucLoadRCnt >= (E2ucDelayLoadR*5-1))             //4*125mS
+ 508   3                  {
+ 509   4                      bChkLoadFlg = 0;
+ 510   4                      bLoadConectFlg = 0; 
+ 511   4                      bChkChgerFlg = 0;
+ 512   4                      bOCD = 0;//·Åµç¹ýÁ÷ÇåÁã
+ 513   4                      bOCD2 = 0;
+ 514   4                      ucLoadRCnt = 0;    
+ 515   4                      REG.AFESCONF1 &= ~0x02; //¹Ø±Õ¸ºÔØ¼ì²â¹¦ÄÜ
+ 516   4                      TWIWriteAFE(AFE_SCONF1, &REG.AFESCONF1);          // close Load Detect
+ 517   4                    if(bAFE_SC)
+ 518   4                    {
+ 519   5                          bAFE_SC = 0;//Çå¿Õ¼ì²â±êÖ¾Î»
+ 520   5                          REG.AFESCONF1 |= 0x80;
+ 521   5                          TWIWriteAFE(AFE_SCONF1, &REG.AFESCONF1);
+ 522   5                          REG.AFESCONF1 &= ~0x80;
+ 523   5                          TWIWriteAFE(AFE_SCONF1, &REG.AFESCONF1);
+ 524   5                    }
+ 525   4                  }
+ 526   3              }
+ 527   2          }
+ 528   1          LoadConnet_FLG = (bLoadConectFlg_test|bLoadConectFlg);
+ 529   1      #if debug
+                  printf("\n -----bLoadConectFlg =%bd----- \n",(bLoadConectFlg_test|bLoadConectFlg));    
+              #endif
+ 532   1      
+ 533   1      }
+ 534          
+ 535          
+ 536          /*******************************************************************************
+ 537          Function: CheckCharger(void)
+ 538          Description:  
+ 539          Input:    
+ 540          Output: 
+C51 COMPILER V9.52.0.0   AFEPROCESS                                                        10/24/2019 15:23:01 PAGE 10  
+
+ 541          Others:
+ 542          *******************************************************************************/
+ 543          void CheckCharger(void)
+ 544          {
+ 545   1        U8 bChgerConectFlg_test = 0x00;
+ 546   1          if(bChkChgerFlg)
+ 547   1        {
+ 548   2              TWIReadAFE(AFE_BSTATUS, &REG.AFEBSTATUS);
+ 549   2              if((REG.AFEBSTATUS&0x01) != 0)//³äµçÆ÷Á¬½Ó×´Ì¬ÊÇ1£¬ÒÑÁ¬½Ó
+ 550   2              {
+ 551   3                if(++ucChgerCnt >= E2ucDelayLoadR*5)
+ 552   3                {
+ 553   4                  bChkChgerFlg = 0;
+ 554   4                  bChgerConectFlg = 1;
+ 555   4                  ucChgerCnt = 0;
+ 556   4                  REG.AFESCONF1 &= ~0x01;//³äµçÆ÷¼ì²âÎ»ÖÃ0
+ 557   4                  TWIWriteAFE(AFE_SCONF1, &REG.AFESCONF1);          // close Charge detect    
+ 558   4          
+ 559   4                }
+ 560   3              }
+ 561   2        }
+ 562   1      
+ 563   1          if(bChkChgerRFlg)//·¢Éú¹ý³äµç¹ýÁ÷£¨´óÓÚ×Ô¼ºÉèÖÃµÄ²ÎÊý£©
+ 564   1          {
+ 565   2              TWIReadAFE(AFE_BSTATUS, &REG.AFEBSTATUS);
+ 566   2              if((REG.AFEBSTATUS&0x01) == 0)//³äµçÆ÷Î´Á¬½Ó
+ 567   2              {
+ 568   3                  if(++ucChgerRCnt >= E2ucDelayLoadR*5)             //4*125mS
+ 569   3                  {
+ 570   4                    bChkChgerRFlg = 0;
+ 571   4                    bOCC = 0;         
+ 572   4                    ucChgerRCnt = 0;    
+ 573   4                    REG.AFESCONF1 &= ~0x01;
+ 574   4                    TWIWriteAFE(AFE_SCONF1, &REG.AFESCONF1);          // close Charge detect
+ 575   4                    
+ 576   4                    //by tomi
+ 577   4                    if(bAFE_SC)
+ 578   4                    {
+ 579   5                        bAFE_OV = 0;//Çå¿Õ¼ì²â±êÖ¾Î»
+ 580   5                        REG.AFESCONF1 |= 0x80;
+ 581   5                        TWIWriteAFE(AFE_SCONF1, &REG.AFESCONF1);
+ 582   5                        REG.AFESCONF1 &= ~0x80;
+ 583   5                        TWIWriteAFE(AFE_SCONF1, &REG.AFESCONF1);
+ 584   5                    }
+ 585   4                  }
+ 586   3              }
+ 587   2        }
+ 588   1      #if debug
+                  printf("\n -----³äµçÆ÷Á¬½ÓbChgerConectFlg =%bd£¬bChkChgerFlg = %bd----- \n",(bChgerConectFlg_test|bChger
+             -ConectFlg),(bChgerConectFlg_test|bChkChgerFlg));    
+              #endif
+ 591   1      }
+ 592          
+ 593          
+ 594          /*******************************************************************************
+ 595          Function: VolProcess()
+ 596          Description:  
+ 597          Input:    
+ 598          Output: 
+ 599          Others:
+ 600          *******************************************************************************/  
+ 601          void VolProcess(void)
+C51 COMPILER V9.52.0.0   AFEPROCESS                                                        10/24/2019 15:23:01 PAGE 11  
+
+ 602          {
+ 603   1        if(!bBalancingFlg)
+ 604   1        {
+ 605   2          //ÅÐ¶ÏÊÇ·ñ³äÂú
+ 606   2            if(!bFC)//³äµç½ØÖ¹±êÖ¾Î»
+ 607   2            {
+ 608   3              //0x010,0x068,³äµçµçÑ¹´óÓÚ4.2v ÇÒµçÁ÷ÒªÐ¡ÓÚ 100mA Ëã³äÂú×´Ì¬
+ 609   3              if((uiCellVmax>E2uiChgEndVol) && (Info.slCurr<=E2siChgEndCur))   //charge end voltage  ´óÓÚ4.2VÐ¡ÓÚ
+             -100ma 1s*5 
+ 610   3              {
+ 611   4                //E2ucDelayChgEnd  0x005,               // U8  xdata DelayChgEnd      _at_  CHG_PARA_MAP_ADDR+10; 5
+ 612   4                if(++ucChgEndcnt >= E2ucDelayChgEnd)
+ 613   4                {
+ 614   5                  bFC = 1;
+ 615   5      #if debug
+                  printf("\n -----bFC ³äµç½ØÖ¹-----uiCellVmax = %d \n",uiCellVmax);    
+              #endif
+ 618   5                  ucChgEndcnt = 0;
+ 619   5                  ucChgEndRcnt = 0;
+ 620   5                }
+ 621   4              }
+ 622   3                else
+ 623   3                {
+ 624   4                  if(ucChgEndcnt > 0)
+ 625   4                  {
+ 626   5                    ucChgEndcnt--;
+ 627   5                  }
+ 628   4                }
+ 629   3            }
+ 630   2            else
+ 631   2            {
+ 632   3              if(uiCellVmin < E2uiChgEndVol) //charge end recover voltage
+ 633   3              {
+ 634   4                if(++ucChgEndRcnt >= E2ucDelayChgEnd)
+ 635   4                {
+ 636   5                  bFC = 0;
+ 637   5                  ucChgEndcnt = 0;
+ 638   5                  ucChgEndRcnt = 0;
+ 639   5                }
+ 640   4              }
+ 641   3                else
+ 642   3                {
+ 643   4                  if(ucChgEndRcnt > 0)
+ 644   4                  {
+ 645   5                    ucChgEndRcnt--;
+ 646   5                  }
+ 647   4                }
+ 648   3            }
+ 649   2        //·Åµç½ØÖ¹
+ 650   2            if(!bFD)
+ 651   2            {
+ 652   3              //0x00B,0x054,  2.9V
+ 653   3              if(uiCellVmin<E2uiDsgEndVol)    //discharge end voltage  ·Åµç½ØÖ¹1s*5ÃëÐ¡ÓÚ2.9V
+ 654   3              {
+ 655   4                if(++ucDsgEndcnt >= E2ucDelayDsgEnd)
+ 656   4                {
+ 657   5                  bFD = 1;
+ 658   5      #if debug
+                  printf("\n -----bFD ·Åµç½ØÖ¹----- \n");    
+              #endif
+ 661   5                  ucDsgEndcnt = 0;
+ 662   5                  ucDsgEndRcnt = 0;
+C51 COMPILER V9.52.0.0   AFEPROCESS                                                        10/24/2019 15:23:01 PAGE 12  
+
+ 663   5                }
+ 664   4              }
+ 665   3                else
+ 666   3                {
+ 667   4                if(ucDsgEndcnt > 0)
+ 668   4                {
+ 669   5                  ucDsgEndcnt--;
+ 670   5                }
+ 671   4                }
+ 672   3            }
+ 673   2            else
+ 674   2            {
+ 675   3              if(uiCellVmin > E2uiDsgEndVol)     //discharge end recover voltage
+ 676   3              {                     
+ 677   4                if(++ucDsgEndRcnt >= E2ucDelayDsgEnd)
+ 678   4                {
+ 679   5                  bFD = 0;
+ 680   5                  ucDsgEndcnt = 0;
+ 681   5                  ucDsgEndRcnt = 0;
+ 682   5                }
+ 683   4              }
+ 684   3                else
+ 685   3                {
+ 686   4                  if(ucDsgEndRcnt > 0)
+ 687   4                  {
+ 688   5                    ucDsgEndRcnt--;
+ 689   5                  }
+ 690   4                }
+ 691   3            }
+ 692   2        }
+ 693   1      #if debug
+                  printf("\n -----VolProcess(void)-----bFD = %x,bFC= %x\n",((uiPackStatus&0x0200)>>9),((uiPackStatus&0x010
+             -0)>>8));    
+              #endif  
+ 696   1      }
+ 697          
+ 698          
+ 699          /*******************************************************************************
+ 700          Function: CurrProtect(void)
+ 701          Description:  
+ 702          Input:    
+ 703          Output: 
+ 704          Others:
+ 705          *******************************************************************************/
+ 706          void CurrProtect(void)
+ 707          {
+ 708   1        if(!bOCC)//Ã»ÓÐ·¢Éú ³äµç¹ýÁ÷±êÖ¾Î»
+ 709   1          {
+ 710   2            //0x000,0x000,0x00B,0x0B8,     3000mA ³äµçµçÁ÷
+ 711   2            if(slCadcCurrent > E2slOCCvol)         //CADC  cycle is 64ms ´óÓÚ×Ô¼ºÉèÖÃµÄ¹ýÁ÷Öµ
+ 712   2            {
+ 713   3                    if(++ucOCCcnt > OCC_DELAY_CNT)
+ 714   3                    {
+ 715   4                      bOCC = 1;
+ 716   4                      ucOCCcnt = 0;
+ 717   4      
+ 718   4                      bChkChgerRFlg = 1;//ÖØÐÂ¼ì²âÊÇ·ñ³äµç
+ 719   4                      ucChgerRCnt = 0;
+ 720   4                      REG.AFESCONF1 |= 0x01;
+ 721   4                      TWIWriteAFE(AFE_SCONF1, &REG.AFESCONF1);          // close VADC
+ 722   4                    }
+ 723   3            }
+C51 COMPILER V9.52.0.0   AFEPROCESS                                                        10/24/2019 15:23:01 PAGE 13  
+
+ 724   2            else
+ 725   2            {
+ 726   3                      if(ucOCCcnt > 0)
+ 727   3                      {
+ 728   4                          ucOCCcnt--; 
+ 729   4                      }
+ 730   3            }
+ 731   2          }
+ 732   1      //·Åµç¹ýÁ÷±£»¤Î»
+ 733   1        if(!bOCD)
+ 734   1          {
+ 735   2              //0xFF,0xFF,0x0B1,0x0E0,  
+ 736   2            if(slCadcCurrent < E2slOCDvol)         //CADC  cycle is 64ms
+ 737   2            {
+ 738   3                    if(++ucOCDcnt > OCD_DELAY_CNT)
+ 739   3                    {
+ 740   4                        ucOCDcnt = 0;
+ 741   4                        bOCD = 1;
+ 742   4                    }
+ 743   3            }
+ 744   2            else
+ 745   2            {
+ 746   3                if(ucOCDcnt > 0)
+ 747   3                {
+ 748   4                  ucOCDcnt--; 
+ 749   4                }
+ 750   3            }
+ 751   2          }     
+ 752   1      //by tomi ¶þ¼¶µçÁ÷±£»¤
+ 753   1      //·Åµç¹ýÁ÷±£»¤Î»
+ 754   1        if(!bOCD2)
+ 755   1          {     
+ 756   2            if(slCadcCurrent < E2slOCD2vol)        //CADC  40A ÑÓÊ±100ms
+ 757   2            {
+ 758   3                if(++ucOCD2cnt > OCD2_DELAY_CNT)
+ 759   3                {
+ 760   4                    ucOCD2cnt = 0;
+ 761   4                    bOCD2 = 1;
+ 762   4                }
+ 763   3            }
+ 764   2            else
+ 765   2            {
+ 766   3                if(ucOCD2cnt > 0)
+ 767   3                {
+ 768   4                  ucOCD2cnt--;  
+ 769   4                }
+ 770   3            }
+ 771   2          }   
+ 772   1      
+ 773   1          
+ 774   1      }
+ 775          
+ 776          
+ 777          /*******************************************************************************
+ 778          Function: CurrProcess(void)
+ 779          Description:  
+ 780          Input:    
+ 781          Output: 
+ 782          Others:
+ 783          *******************************************************************************/
+ 784          #define AverTime  4
+ 785          void CurrProcess(void)
+C51 COMPILER V9.52.0.0   AFEPROCESS                                                        10/24/2019 15:23:01 PAGE 14  
+
+ 786          {
+ 787   1        U8 i;
+ 788   1        S32 Tempdata=0;
+ 789   1      
+ 790   1        TWIReadAFE(AFE_CURH, (U8 xdata *)&AFE.siCurr);  //Í¨¹ýTWI¶ÁÈ¡CADC²É¼¯µÄµçÁ÷Öµ
+ 791   1        
+ 792   1      #if 0
+                if((AFE.siCurr&0x1000) != 0)          //¸ù¾Ýbit12ÅÐ¶ÏÊÇ·ñÎª¸ºÊý(·ÅµçµçÁ÷Îª¸ºÖµ)£¬ÈçÎª¸ºÖµ¸ßÎ»²¹0
+                {
+                  AFE.siCurr|=0xE000; //1110 0000 0000 0000 µÚ12Î»£º1±íÊ¾·Åµç£¬0±íÊ¾³äµç
+                }
+                slCadcCurrent = (S32)CALICUR*(AFE.siCurr-E2siCadcOffset)/E2siCadcGain;
+              
+                slCadcCurBuf[ucCadcCnt] = slCadcCurrent;    //¶ÔÁ¬Ðø²É¼¯µÄ16´ÎµçÁ÷È¡Æ½¾ùÖµ£¬×÷Îªµ±Ç°µçÁ÷Öµ
+                if(++ucCadcCnt >= 16)
+                {
+                  ucCadcCnt = 0;
+                }
+                for(i=0; i<16; i++)
+                {
+                  Tempdata += slCadcCurBuf[i];
+                }
+                slCadcCurAverage = Tempdata/16; 
+                
+              #else
+ 811   1        
+ 812   1        //slCadcCurrent = AFE.siCurr&(~0xE000);
+ 813   1        if((AFE.siCurr&0x1000) != 0)          //¸ù¾Ýbit12ÅÐ¶ÏÊÇ·ñÎª¸ºÊý(·ÅµçµçÁ÷Îª¸ºÖµ)£¬ÈçÎª¸ºÖµ¸ßÎ»²¹1
+ 814   1        {
+ 815   2          AFE.siCurr|=0xE000; //1110 0000 0000 0000 µÚ12Î»£º1±íÊ¾·Åµç£¬0±íÊ¾³äµç
+ 816   2        }
+ 817   1      #if (chargedebug|discurdebug)
+ 818   1          printf("\n µ¥´ÎµçÁ÷ÖµAFE.siCurr = %d \n",AFE.siCurr);    
+ 819   1      #endif    
+ 820   1        //slCadcCurrent = (S32)AFE.siCurr;
+ 821   1        slCadcCurrent = (S32)CALICUR*(AFE.siCurr-E2siCadcOffset)/E2siCadcGain;   //       (AFE.siCurr-3)/ (-82)
+ 822   1      #if (chargedebug|discurdebug)
+ 823   1          printf("\n µçÁ÷----------------slCadcCurrent ------------------= %ld \n",slCadcCurrent);    
+ 824   1      #endif  
+ 825   1        slCadcCurBuf[ucCadcCnt] = slCadcCurrent;
+ 826   1        if(AverTime <= 16)//·ÀÄÚ´æ³¬³ö
+ 827   1        { 
+ 828   2          if(++ucCadcCnt >= AverTime)
+ 829   2          {
+ 830   3            ucCadcCnt = 0;
+ 831   3          }
+ 832   2          if(ucCadcCnt == 0)//µ½´ïÁË16´Î
+ 833   2          {
+ 834   3            for(i=0; i<AverTime; i++)
+ 835   3            {
+ 836   4              Tempdata += slCadcCurBuf[i];
+ 837   4            }
+ 838   3            slCadcCurAverage = Tempdata/AverTime;
+ 839   3          }
+ 840   2        } 
+ 841   1      #endif  
+ 842   1      #if (chargedebug|discurdebug)
+ 843   1          printf("\n Æ½¾ùµçÁ÷ CurrProcess(void): slCadcCurAverage = %ld \n",slCadcCurAverage);    
+ 844   1      #endif  
+ 845   1      
+ 846   1        bDSGING = 0;
+ 847   1        bCHGING = 0;
+C51 COMPILER V9.52.0.0   AFEPROCESS                                                        10/24/2019 15:23:01 PAGE 15  
+
+ 848   1        //< -100mA  
+ 849   1        if(slCadcCurAverage < (-E2siDfilterCur))//·Åµç×´Ì¬ÏÂÆ½¾ùµçÁ÷´óÓÚE2siDfilterCur
+ 850   1        {
+ 851   2      #if debug
+                  printf("\n Ð¡ÓÚ -100mA \n");    
+              #endif  
+ 854   2          bDSGING = 1; //ÕýÔÚ·Åµç 
+ 855   2          UART_IRQ_DISABLE;
+ 856   2          Info.slCurr = slCadcCurAverage;
+ 857   2          UART_IRQ_ENABLE;
+ 858   2        }
+ 859   1        //rs2 -> rs1³äµç×´Ì¬£¬¶¨ÒåµçÁ÷ÎªÕý
+ 860   1        else if(slCadcCurAverage > E2siDfilterCur) //100
+ 861   1        {
+ 862   2      #if debug
+                  printf("\n ´óÓÚ 100mA \n");    
+              #endif  
+ 865   2          bCHGING = 1;   //ÕýÔÚ³äµç 
+ 866   2          UART_IRQ_DISABLE;
+ 867   2          Info.slCurr = slCadcCurAverage;
+ 868   2          UART_IRQ_ENABLE;
+ 869   2        }
+ 870   1        else
+ 871   1        {
+ 872   2          UART_IRQ_DISABLE;
+ 873   2          Info.slCurr = 0;
+ 874   2          UART_IRQ_ENABLE;
+ 875   2        }
+ 876   1      //ÈôÕýÔÚ³äµç£¬Òª×öµÄ¶¯×÷£¬Ò»°ãÊÇLEDÖ¸Ê¾
+ 877   1          if(bCHGING)           //debounce: flick led charging
+ 878   1          {
+ 879   2      #if chargedebug
+                      printf("\n is charging \n");
+              #endif
+ 882   2      //        if(!bLEDChgFlg)
+ 883   2      //        {
+ 884   2      //            if(++ucLedChgCnt > 8)
+ 885   2      //            {
+ 886   2      //                bLEDChgFlg = 1;
+ 887   2      //                ucLedChgCnt = 0;
+ 888   2      //            }
+ 889   2      //        }
+ 890   2      //        else
+ 891   2      //        {
+ 892   2      //            if(ucLedChgCnt > 0)
+ 893   2      //            {
+ 894   2      //                ucLedChgCnt--;
+ 895   2      //            }
+ 896   2      //        }
+ 897   2          }
+ 898   1          else //²»ÔÚ³äµç
+ 899   1          {
+ 900   2      #if chargedebug
+                      printf("\n is  not charging \n");
+              #endif
+ 903   2      //        if(!bLEDChgFlg)
+ 904   2      //        {
+ 905   2      //            if(ucLedChgCnt > 0)
+ 906   2      //            {
+ 907   2      //                ucLedChgCnt--;
+ 908   2      //            }
+ 909   2      //        }
+C51 COMPILER V9.52.0.0   AFEPROCESS                                                        10/24/2019 15:23:01 PAGE 16  
+
+ 910   2      //        else
+ 911   2      //        {
+ 912   2      //            if(++ucLedChgCnt > 8)
+ 913   2      //            {
+ 914   2      //                bLEDChgFlg = 0;
+ 915   2      //                ucLedChgCnt = 0;
+ 916   2      //            }
+ 917   2      //        }    
+ 918   2          }
+ 919   1      #if 0
+                      printf("\n CurrProcess uiPackStatus =%hx ---µÍ8Î»£ºbCAL =%x,0,0,0,0,bVDQ=%x,bFD=%x,bFC=%x ¸ß8Î»:0,bFas
+             -tDischarge=%x,bMidDischarge=%x,bSlowDischarge=%x,bDSGING=%x,bCHGING=%x,bDSGMOS=%x,bCHGMOS=%x\n",uiPackStatus,((uiPackSta
+             -tus&0x8000)>>15),((uiPackStatus&0x0400)>>10),((uiPackStatus&0x0200)>>9),((uiPackStatus&0x0100)>>8),\
+                  ((uiPackStatus&0x0040)>>6),((uiPackStatus&0x0020)>>5),((uiPackStatus&0x0010)>>4),((uiPackStatus&0x0008)>
+             ->3),((uiPackStatus&0x0004)>>2),((uiPackStatus&0x0002)>>1),(uiPackStatus&0x0001));      
+              #endif
+ 923   1        CurrProtect();
+ 924   1      }
+ 925          
+ 926          
+ 927          /*******************************************************************************
+ 928          Function: AFERamCheck(void)
+ 929          Description: 
+ 930          Input:    
+ 931          Output: 
+ 932          Others:
+ 933          *******************************************************************************/
+ 934          void AFERamCheck(void)
+ 935          {
+ 936   1        U8 xdata RdBuf[2];
+ 937   1        U8 i;
+ 938   1      
+ 939   1        for(i=3; i<=11; i=i+2)    //´Ó¿ÉÐ´¼Ä´æÆ÷03H¿ªÊ¼±È½Ï   // 03H  05H 07H 09H 0BH
+ 940   1        {
+ 941   2          TWIReadAFE(i, RdBuf); 
+ 942   2      
+ 943   2              if((RdBuf[0]!=*(&REG.AFEFLAG1+i)) || (RdBuf[1]!=*(&REG.AFEFLAG1+i+1)))
+ 944   2              {
+ 945   3                if(i != 7) //07HÊÇÊý¾ÝÎ»
+ 946   3                {
+ 947   4                        InitAFE();    
+ 948   4                        break;
+ 949   4                }
+ 950   3              }
+ 951   2        }
+ 952   1      }
+ 953          
+ 954          
+ 955          /*******************************************************************************
+ 956          Function: AlarmProcess(void)
+ 957          Description:  
+ 958          Input:  NULL  
+ 959          Output: NULL
+ 960          Others:
+ 961          *******************************************************************************/
+ 962          void AlarmProcess(void)
+ 963          {
+ 964   1        TWIReadAFE(AFE_FLAG1, &REG.AFEFLAG1); //¶ÁÈ¡AFE¼Ä´æÆ÷FLAG1 & FLAG2ÖÐµÄAlarm±êÖ¾
+ 965   1      
+ 966   1        if((REG.AFEFLAG2&0x02) != 0)  //CADC µçÁ÷×ª»»Íê³É 
+ 967   1        {
+ 968   2          bCADCFlg = 1;
+C51 COMPILER V9.52.0.0   AFEPROCESS                                                        10/24/2019 15:23:01 PAGE 17  
+
+ 969   2      #if debug
+                  printf("\n Cur trans OK! \n");    
+              #endif  
+ 972   2        }
+ 973   1      
+ 974   1        if((REG.AFEFLAG2&0x01) != 0)  //VADC µçÑ¹×ª»»Íê³É
+ 975   1        {
+ 976   2          bVADCFlg = 1;
+ 977   2      #if debug
+                  printf("\n VOL trans OK! \n");    
+              #endif  
+ 980   2        }
+ 981   1      
+ 982   1        if((REG.AFEFLAG1&0x08) != 0)  //AFE ¶ÌÂ·±£»¤
+ 983   1        {
+ 984   2          bAFE_SC = 1;
+ 985   2          Info.uiPackStatus = uiPackStatus;
+ 986   2        }
+ 987   1      
+ 988   1        if((REG.AFEFLAG1&0x04) != 0)  //AFE ¹ýÑ¹±£»¤
+ 989   1        {
+ 990   2          bAFE_OV = 1;
+ 991   2          //by tomi
+ 992   2          bChkChgerRFlg = 1; //×Ô»Ö¸´
+ 993   2          Info.uiPackStatus = uiPackStatus;
+ 994   2        }
+ 995   1      
+ 996   1        if((REG.AFEFLAG2&0x04) != 0)  //ÅÐ¶ÏFLAG2µÄbit2ÊÇ·ñÎª1£¬ÈçÎª1Ôò±íÊ¾AFE·¢Éú¹ýLVR£¬ÐèÒªÖØÐÂ³õÊ¼»¯AFE¼Ä´æÆ÷
+ 997   1        {
+ 998   2          InitAFE();
+ 999   2      #if debug
+                  printf("AFEµÄrst·¢Éú¹ýLVR \n");    
+              #endif  
+1002   2        }
+1003   1      
+1004   1      #if debug
+                  printf("\n uiPackStatus =%hx ---µÍ8Î»£ºbCAL =%x,0,0,0,0,bVDQ=%x,bFD=%x,bFC=%x ¸ß8Î»:0,bFastDischarge=%x,
+             -bMidDischarge=%x,bSlowDischarge=%x,bDSGING=%x,bCHGING=%x,bDSGMOS=%x,bCHGMOS=%x\n",uiPackStatus,((uiPackStatus&0x8000)>>1
+             -5),((uiPackStatus&0x0400)>>10),((uiPackStatus&0x0200)>>9),((uiPackStatus&0x0100)>>8),\
+                  ((uiPackStatus&0x0040)>>6),((uiPackStatus&0x0020)>>5),((uiPackStatus&0x0010)>>4),((uiPackStatus&0x0008)>
+             ->3),((uiPackStatus&0x0004)>>2),((uiPackStatus&0x0002)>>1),(uiPackStatus&0x0001));   
+              
+              #endif 
+1009   1        
+1010   1      } 
+1011            
+1012          
+1013          /*******************************************************************************
+1014          Function:WaitADCConvert(void) 
+1015          Description:  
+1016          Input:  NULL  
+1017          Output: NULL
+1018          Others:
+1019          *******************************************************************************/
+1020          bit WaitADCConvert(void)
+1021          {
+1022   1          U8 i;
+1023   1          BOOL result=0;
+1024   1      
+1025   1          while(i++ < 60)
+1026   1          {
+1027   2              Delay1ms(5);
+C51 COMPILER V9.52.0.0   AFEPROCESS                                                        10/24/2019 15:23:01 PAGE 18  
+
+1028   2            TWIReadAFE(AFE_FLAG1, &REG.AFEFLAG1);   //read AFE FLAG1 search for which state  trigged ALARM
+1029   2            if((REG.AFEFLAG2&0x01) != 0)        //VADC interrupt
+1030   2            {
+1031   3            while(i++ < 60)
+1032   3              {
+1033   4                  Delay1ms(5);
+1034   4                TWIReadAFE(AFE_FLAG1, &REG.AFEFLAG1);   //read AFE FLAG1 search for which state  trigged ALARM
+1035   4                if((REG.AFEFLAG2&0x02) != 0)        //CADC interrupt
+1036   4                {
+1037   5                  result = 1;
+1038   5                      break;
+1039   5                }
+1040   4              }
+1041   3                  break;
+1042   3            }
+1043   2          }
+1044   1      
+1045   1          return result;
+1046   1      }
+1047          
+1048          
+1049          /*******************************************************************************
+1050          Function: PorOnProtect(void)
+1051          Description:  
+1052          Input:  NULL  
+1053          Output: NULL
+1054          Others:
+1055          *******************************************************************************/
+1056          void PorOnProtect(void)
+1057          {
+1058   1        //µ¥Ð¾¹ý³ä  E2uiOVvol > 0x010,0x09A,4250 > 4.25V -->4.175
+1059   1        if(uiCellVmax > E2uiOVvol)//E2uiOVvol¹ý³äµç±£»¤ãÐÖµ    
+1060   1        {   
+1061   2          bHV = 1;
+1062   2      #if debug
+                  TI = 0;
+                  TI = 1; 
+                  printf("\n --¹ý³äbHV-- \n");   
+              #endif  
+1067   2        }
+1068   1       //E2uiUVvol = 0x00A,0x08C, 2.7v
+1069   1        if(uiCellVmin < E2uiUVvol)//Ç·Ñ¹±£»¤ãÐÖµ
+1070   1        {   
+1071   2          bUV = 1;
+1072   2          bChkChgerFlg = 1;//¼ì²é³äµçÆ÷±êÖ¾ÖÃ1
+1073   2          bChgerConectFlg = 0;//ÒÑÁ¬½Ó±êÖ¾Çå¿Õ
+1074   2          ucChgerCnt = 0;
+1075   2          //Ê¹ÄÜ³äµçÆ÷¼ì²â
+1076   2          REG.AFESCONF1 |= 0x01;
+1077   2          TWIWriteAFE(AFE_SCONF1, &REG.AFESCONF1);          //enable charger detect 
+1078   2      #if debug
+                  printf("\n --Ç·Ñ¹bUV--\n");   
+              #endif  
+1081   2        }
+1082   1      
+1083   1        if(uiTempeMax > E2uiTempOTC)//  0x00C,0x09F,            // U16 xdata TempOTC          _at_  CHG_TEMP_PARA_MAP_ADDR
+             -;    3231-2731=500
+1084   1        {
+1085   2          bOTC = 1;
+1086   2      #if debug
+                  printf("\n --³ä¹ýÎÂbOTC--\n");   
+              #endif  
+C51 COMPILER V9.52.0.0   AFEPROCESS                                                        10/24/2019 15:23:01 PAGE 19  
+
+1089   2        }
+1090   1      
+1091   1        if(uiTempeMin < E2uiTempUTC) //0ÉãÊÏ¶È
+1092   1        {
+1093   2          bUTC = 1;
+1094   2      #if debug
+                  printf("\n --³äµÍÎÂbUTC-\n");   
+              #endif  
+1097   2        }
+1098   1        if(uiTempeMax > E2uiTempOTD)//70 ÉãÊÏ¶È    3461
+1099   1        {
+1100   2          bOTD = 1;
+1101   2      #if debug
+                  printf("\n --·Å¸ßÎÂbOTD-\n");   
+              #endif 
+1104   2        }
+1105   1      
+1106   1        if(uiTempeMin < E2uiTempUTD)//-10ÉãÊÏ¶È 
+1107   1        {
+1108   2          bUTD = 1;
+1109   2      #if debug 
+                  printf("\n --·ÅµÍÎÂbUTD--\n");   
+              #endif 
+1112   2        }
+1113   1      //
+1114   1      //sbit bHV      = uiBatStatus^8;//¹ý³å±£»¤±êÖ¾Î»
+1115   1      //sbit bUV      = uiBatStatus^9;//¹ý·Å±£»¤±êÖ¾Î»
+1116   1      //sbit bOCC       =   uiBatStatus^10;//³äµç¹ýÁ÷±£»¤±êÖ¾Î» 1·¢Éú¹ý±£»¤
+1117   1      //sbit bOCD       =   uiBatStatus^11;//·Åµç¹ýÁ÷±£»¤±êÖ¾Î»
+1118   1      //sbit bOCD2      =   uiBatStatus^12;//·Åµç¹ýÁ÷2±£»¤±êÖ¾Î»
+1119   1        
+1120   1      //sbit bOTC       = uiBatStatus^0;//³äµç¸ßÎÂ±£»¤
+1121   1      //sbit bOTD       =   uiBatStatus^1;//·Åµç¸ßÎÂ±£»¤
+1122   1      //sbit bUTC     = uiBatStatus^2;//³äµçµÍÎÂ±£»¤
+1123   1      //sbit bUTD     = uiBatStatus^3;//·ÅµçµÍÎÂ±£»¤
+1124   1      //sbit bAFE_OV    = uiBatStatus^4;//Ó²¼þ¹ý³å±£»¤
+1125   1      //sbit bAFE_SC    = uiBatStatus^5;//Ó²¼þ¶ÌÂ·±£»¤
+1126   1      //sbit bCTO     = uiBatStatus^6; //Ô¤ÁôÎ»£¬¶ÏÏß±£»¤
+1127   1      
+1128   1      #if debug
+                  TI = 0;
+                  TI = 1; 
+                  printf("\n PorOnProtect() uiBatStatus = %x\n",uiBatStatus);   
+              #endif  
+1133   1      
+1134   1      #if debug
+                  //×¢ÒâÕâ±ßµÍÎ»×Ö½Ú·ÅÇ°Ãæ£¬¸ßÎ»×Ö½Ú´æ´¢ÔÚºóÃæ
+                  printf("\n µÍ8Î»£º0,bCTO=%x,bAFE_SC=%x,bAFE_OV=%x,bUTD=%x,bUTC=%x,bOTD=%x,bOTC=%x ¸ß8Î» 0,0,0,bOCD2=%x,b
+             -OCD=%x,bOCC=%x,bUV=%x,bHV=%x,\n",((uiBatStatus&0x4000)>>14),((uiBatStatus&0x2000)>>13),((uiBatStatus&0x1000)>>12),((uiBa
+             -tStatus&0x0800)>>11),\
+                  ((uiBatStatus&0x0400)>>10),((uiBatStatus&0x0200)>>9),((uiBatStatus&0x0100)>>8),((uiBatStatus&0x0010)>>4)
+             -,((uiBatStatus&0x0008)>>3),((uiBatStatus&0x0004)>>2),((uiBatStatus&0x0002)>>1),(uiBatStatus&0x0001));   
+              #endif  
+1139   1        
+1140   1          /*********by tomi********/
+1141   1      
+1142   1          Input_charger_detect_poron();//ÅÐ¶Ï³äµçÆ÷ÓÐÃ»ÓÐ²å 
+1143   1      
+1144   1          if(ConectFlg_poron == 1)
+1145   1          {
+1146   2      #if 1 
+1147   2            printf("\n ³äµçÆ÷ÒÑÁ¬½Ó\n");
+C51 COMPILER V9.52.0.0   AFEPROCESS                                                        10/24/2019 15:23:01 PAGE 20  
+
+1148   2      #endif
+1149   2            Input_vol_judge_poron();//ÅÐ¶Ï³äµçÆ÷µÄ³äµçµçÑ¹  
+1150   2          } 
+1151   1          else//Èç¹û³äµçÆ÷²»Á¬½ÓÁË,Çå¿Õ´íÎó±êÖ¾Î»
+1152   1          {     
+1153   2      #if 1 
+1154   2            printf("\n Çå¿ÕOIV UIV\n");
+1155   2      #endif      
+1156   2            OIV = 0;
+1157   2            UIV = 0;
+1158   2          }
+1159   1          
+1160   1         // Chk_Fuse_poron(); //¼ì²éÓÐÃ»ÓÐÈÛ¶Ï£¨ÉÏµçË²¼ä²»¼ì²éÈÛ¶Ï£©
+1161   1          Chk_Cell_VolDIFF_poron();//Ñ¹²î±£»¤
+1162   1      
+1163   1          MCU_CHK_CDmos();
+1164   1        /***************************/
+1165   1      
+1166   1          ChkMosStatus();        
+1167   1          ControlMos();
+1168   1      #if 1
+1169   1          updata_pack_fault_flag();
+1170   1      #endif
+1171   1      }
+1172          
+1173          
+1174          /*******************************************************************************
+1175          Function: ProtectProcess(void)
+1176          Description:  
+1177          Input:    
+1178          Output: 
+1179          Others:
+1180          *******************************************************************************/
+1181          void ProtectProcess(void)
+1182          {
+1183   1        //²»ÊÇ¶ÏÏß»òÕßÊÇÔÚÆ½ºâ×´Ì¬ÏÂ
+1184   1        if(!(bCellOpenDecFlag || bBalanceFlg))//ÔÚ¶ÏÏß¼ì²âºÍÆ½ºâµÄ×´Ì¬ÏÂ£¬²»×öµçÑ¹±£»¤
+1185   1        {
+1186   2          //µçÑ¹±£»¤³ÌÐò£¨bHV£©
+1187   2          VolProtect();     
+1188   2        }
+1189   1          //ÎÂ¶È±£»¤³ÌÐò
+1190   1          TempeProtect();   
+1191   1      //------------------------------------------------------------------------------------------------- 
+1192   1      #if 0
+                  /*********by tomi********/
+                //ÔËÐÐÆðÀ´ºó£¬ £¨1£©ÔÚ~(AFE_CHG_MOS  = 1ÇÒIO_CHG_MOS= 0) Ìõ¼þ£¨2£©£ºÉÏ´ÎÃ»ÓÐ³äµçÆ÷Õâ´ÎÓÐ³äµçÆ÷ÁË £¬»¹ÓÐÒ»
+             -ÖÖÊÇ³äµçmosÃ»ÓÐ¿ªÆô
+                  if(!((IO_CHG_MOS == 0) && ((uiPackStatus&0x0001) == 1)) )//ÔÚ¶¼¹Ø±ÕµÄ×´Ì¬ÏÂ
+                  {
+              #if debug
+                    printf(" \n");
+              #endif
+                    Input_charger_detect_poron();//ÅÐ¶Ï³äµçÆ÷ÓÐÃ»ÓÐ²å
+                    if(ConectFlg_poron == 1)
+                    {
+                      Input_vol_judge();//ÅÐ¶Ï³äµçÆ÷µÄ³äµçµçÑ¹
+                    } 
+                    else
+                    {
+                      OIV = 0;
+                      UIV = 0;
+C51 COMPILER V9.52.0.0   AFEPROCESS                                                        10/24/2019 15:23:01 PAGE 21  
+
+                    }
+                  }
+              #endif  
+1212   1          /*********by tomi********/
+1213   1      //ÔËÐÐÆðÀ´ºó£¬ £¨1£©ÔÚ~(AFE_CHG_MOS  = 1ÇÒIO_CHG_MOS= 0) Ìõ¼þ£¨2£©£ºÉÏ´ÎÃ»ÓÐ³äµçÆ÷Õâ´ÎÓÐ³äµçÆ÷ÁË £¬»¹ÓÐÒ»Ö
+             -ÖÊÇ³äµçmosÃ»ÓÐ¿ªÆô
+1214   1          if(bCHGING == 0)//Èç¹û²»ÔÚ³äµçÁË
+1215   1          {   
+1216   2            if(++CHGING_cnt >= 4)
+1217   2            {
+1218   3              CHGING_cnt = 0;
+1219   3              IO_CHG_MOS = 1;//¹Ø±Õ³äµçmos
+1220   3              Input_charger_detect();//ÅÐ¶Ï³äµçÆ÷ÓÐÃ»ÓÐ²å
+1221   3              if(ConectFlg_poron == 1)
+1222   3              {
+1223   4                //1.CMOSÃ»ÓÐ´ò¿ª
+1224   4                if(!((IO_CHG_MOS == 0) && ((uiPackStatus&0x0001) == 1)) )//ÔÚ¶¼¹Ø±ÕµÄ×´Ì¬ÏÂ
+1225   4                {
+1226   5      #if chargedebug
+                          printf("Input_vol_judgeÑÓÊ±¼ì²â\n");
+              #endif  
+1229   5                  if(ConectFlg_poron_prev == 1)//
+1230   5                  {
+1231   6                    Input_vol_judge();//ÅÐ¶Ï³äµçÆ÷µÄ³äµçµçÑ¹£¬ÓÐÑÓÊ±µÄÅÐ¶Ï
+1232   6                  }
+1233   5                  else//Èç¹ûÉÏ´ÎÊÇµÚÒ»´Î²å
+1234   5                  {
+1235   6                    Input_vol_judge_poron();//ÒòÎªÖ»²É¼¯Ò»´ÎËùÒÔ²»ÓÃµÈ´ý»Ö¸´
+1236   6                  }
+1237   5                      
+1238   5                } 
+1239   4                //2.CMOS´ò¿ªÁË
+1240   4        //        else
+1241   4        //        {
+1242   4        //          //¾ÍÒªÅÐ¶Ï£¬ÉÏÒ»´ÎÊÇ·ñÃ»²å ³äµçÆ÷
+1243   4        //          if(ConectFlg_poron_prev == 0)
+1244   4        //          {
+1245   4        //#if chargedebug
+1246   4        //            printf("Input_vol_judge_poronµ¥´Î¼ì²â\n");
+1247   4        //#endif              
+1248   4        //            Input_vol_judge_poron();//µ¥´Î¼ì²â
+1249   4        //          }
+1250   4        //        }
+1251   4              }
+1252   3              else
+1253   3              { 
+1254   4      #if chargedebug
+                          printf("&&&&&&&&&&&&&&2\n");
+              #endif        
+1257   4                OIV = 0;
+1258   4                UIV = 0;
+1259   4              }     
+1260   3            ConectFlg_poron_prev = ConectFlg_poron;
+1261   3      #if chargedebug
+                    printf("ConectFlg_poron_prev2=%bd\n",ConectFlg_poron_prev);
+              #endif  
+1264   3            }     
+1265   2          }   
+1266   1          else
+1267   1          {
+1268   2            CHGING_cnt = 0;
+1269   2          }
+C51 COMPILER V9.52.0.0   AFEPROCESS                                                        10/24/2019 15:23:01 PAGE 22  
+
+1270   1          
+1271   1          Chk_Fuse(); //¼ì²éÓÐÃ»ÓÐÈÛ¶Ï
+1272   1          Chk_Cell_VolDIFF();
+1273   1      
+1274   1      
+1275   1          
+1276   1          MCU_CHK_CDmos();
+1277   1      //------------------------------------------------------------------------------------------------- 
+1278   1        
+1279   1        //mos×´Ì¬¼ì²âºÍ´¦Àí
+1280   1          ChkMosStatus();   
+1281   1          ControlMos(); 
+1282   1      #if 1
+1283   1          updata_pack_fault_flag(); //25msÖ´ÐÐÒ»´Î
+1284   1      #endif
+1285   1        
+1286   1          Info.uiBatStatus = uiBatStatus;
+1287   1          Info.uiPackStatus = uiPackStatus;
+1288   1      //¹ýÁ÷×Ô»Ö¸´Ê¹ÄÜ
+1289   1          RecoveryOC();
+1290   1      
+1291   1          CheckLoad();
+1292   1      //²»¶ÏµÄÈ¥¼ì²â³äµçÆ÷ÊÇ·ñ±»²åÈë
+1293   1          CheckCharger();
+1294   1      
+1295   1      }
+1296          
+1297          
+1298          /*******************************************************************************
+1299          Function: IntoPowerDown(void)
+1300          Description:  
+1301          Input:    
+1302          Output: 
+1303          Others:    FOR UART 
+1304          *******************************************************************************/
+1305          void IntoPowerDown(void)
+1306          {
+1307   1        REG.AFESCONF10 = 0x33;            //½øÈëPower DownÄ£Ê½
+1308   1        TWIWriteAFE(AFE_SCONF10, &REG.AFESCONF10);
+1309   1        REG.AFESCONF1 |= 0x20; 
+1310   1        TWIWriteAFE(AFE_SCONF1, &REG.AFESCONF1);
+1311   1      }
+1312          
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =   3695    ----
+   CONSTANT SIZE    =    365    ----
+   XDATA SIZE       =   ----      12
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----       1
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

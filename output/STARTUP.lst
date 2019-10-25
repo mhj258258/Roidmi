@@ -1,0 +1,52 @@
+A51 MACRO ASSEMBLER  STARTUP                                                              10/23/2019 16:08:45 PAGE     1
+
+
+MACRO ASSEMBLER A51 V8.02b
+OBJECT MODULE PLACED IN .\output\STARTUP.obj
+ASSEMBLER INVOKED BY: C:\Program Files (x86)\keil 51\C51\BIN\A51.EXE code\STARTUP.A51 NOMOD51 SET(LARGE) DEBUG PRINT(.\o
+                      utput\STARTUP.lst) OBJECT(.\output\STARTUP.obj) EP
+
+LOC  OBJ            LINE     SOURCE
+
+                       1     $nomod51 
+                       2     NAME    ?C_STARTUP
+                       3     
+                       4     EXTRN CODE (?C_START)
+                       5     PUBLIC  ?C_STARTUP
+                       6     
+                       7     
+                       8     EXTRN   IDATA   (STACK)
+                       9     
+----                  10                     CSEG    AT      0
+0000 020000   F       11     ?C_STARTUP:     LJMP    STARTUP1
+                      12     
+                      13     
+                      14     
+                      15     ?C_C51STARTUP           SEGMENT CODE
+----                  16                                                                     RSEG                    ?C_
+                             C51STARTUP
+0000                  17     STARTUP1:
+0000 758100   F       18                     MOV     SP, #STACK-1
+0003 020000   F       19                     LJMP    ?C_START
+                      20     
+                      21                     END
+A51 MACRO ASSEMBLER  STARTUP                                                              10/23/2019 16:08:45 PAGE     2
+
+SYMBOL TABLE LISTING
+------ ----- -------
+
+
+N A M E             T Y P E  V A L U E   ATTRIBUTES
+
+?C_C51STARTUP. . .  C SEG    0006H       REL=UNIT
+?C_START . . . . .  C ADDR   -----       EXT
+?C_STARTUP . . . .  C ADDR   0000H   A   
+SP . . . . . . . .  D ADDR   0081H   A   
+STACK. . . . . . .  I ADDR   -----       EXT
+STARTUP1 . . . . .  C ADDR   0000H   R   SEG=?C_C51STARTUP
+
+
+REGISTER BANK(S) USED: 0 
+
+
+ASSEMBLY COMPLETE.  0 WARNING(S), 0 ERROR(S)

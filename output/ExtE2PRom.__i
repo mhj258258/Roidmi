@@ -1,0 +1,1 @@
+"code\ExtE2PRom.c" LARGE OPTIMIZE (7,SPEED) BROWSE INCDIR(.\header;.\roidmi\inc) DEBUG OBJECTEXTEND PRINT(.\output\ExtE2PRom.lst) TABS (2) OBJECT(.\output\ExtE2PRom.obj)

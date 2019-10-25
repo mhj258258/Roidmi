@@ -1,0 +1,1 @@
+"roidmi\src\protect.c" LARGE OPTIMIZE (7,SPEED) BROWSE INCDIR(.\header;.\roidmi\inc) DEBUG OBJECTEXTEND PRINT(.\output\protect.lst) TABS (2) OBJECT(.\output\protect.obj)

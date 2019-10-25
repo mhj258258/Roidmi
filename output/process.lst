@@ -1,0 +1,306 @@
+C51 COMPILER V9.52.0.0   PROCESS                                                           10/24/2019 15:23:02 PAGE 1   
+
+
+C51 COMPILER V9.52.0.0, COMPILATION OF MODULE PROCESS
+OBJECT MODULE PLACED IN .\output\process.obj
+COMPILER INVOKED BY: C:\Program Files (x86)\keil 51\C51\BIN\C51.EXE roidmi\src\process.c LARGE OPTIMIZE(7,SPEED) BROWSE 
+                    -INCDIR(.\header;.\roidmi\inc) DEBUG OBJECTEXTEND PRINT(.\output\process.lst) TABS(2) OBJECT(.\output\process.obj)
+
+line level    source
+
+   1          #include "System.h"
+   2          #include "AfeMtp.h"
+   3          
+   4          //extern U8 xdata Short_flag;
+   5          U8 xdata Short_flag = 0; 
+   6          //U8 xdata Sflag = 0;
+   7          //extern U8 xdata Sflag;
+   8          /*******************************************************************************************
+   9          * 函数名: MCU_33V_Procude
+  10          * 参  数: 无
+  11          * 返回值: 无
+  12          * 作  用: 作为开机调试使用
+  13          *********************************************************************************************/
+  14          void MCU_33V_Procude(void) 
+  15          {
+  16   1        IO_POWER_ON = 1;
+  17   1      }
+  18          
+  19          
+  20          /*******************************************************************************************
+  21          * 函数名: MCU_Short_Clean
+  22          * 参  数: 无
+  23          * 返回值: 无
+  24          * 作  用: 清除自己外部的短路标志，这是用来和内部的短路比较调试用的
+  25          *********************************************************************************************/
+  26          void MCU_Short_Clean(void)
+  27          {
+  28   1        IO_SCP_RST = 1;
+  29   1        Short_flag = 0;//短路清除
+  30   1      }
+  31          
+  32          
+  33          /*******************************************************************************************
+  34          * 函数名: MCU_CHK_CDmos
+  35          * 参  数: 无
+  36          * 返回值: 无
+  37          * 作  用: 用来判断自己的控制mos管开关
+  38          *********************************************************************************************/
+  39          
+  40          void MCU_CHK_CDmos(void)
+  41          {
+  42   1        U8 ALLOW_CHG_FLAG = 0;
+  43   1        U8 ALLOW_DSG_FLAG = 0;
+  44   1        //刚开始状态下MCU控制开关为关闭状态
+  45   1      //  IO_CHG_MOS = 1;
+  46   1      //  IO_DSG_MOS = 1;
+  47   1        //什么情况下
+  48   1        //OIV = 1不允许充电 FOPEN = 1//保险丝熔断
+  49   1        if( OIV|| UIV || FOPEN || Odiff|| (ConectFlg_poron == 0) )//如果不充电
+  50   1        {
+  51   2          IO_CHG_MOS = 1;//不充电
+  52   2          ALLOW_CHG_FLAG = 0;
+  53   2        }
+  54   1        else
+C51 COMPILER V9.52.0.0   PROCESS                                                           10/24/2019 15:23:02 PAGE 2   
+
+  55   1        {
+  56   2          IO_CHG_MOS = 0;//允许充电
+  57   2          ALLOW_CHG_FLAG = 1;
+  58   2        }
+  59   1        
+  60   1      //Short_flag =1说明短路
+  61   1        if( FOPEN || Odiff || Short_flag)
+  62   1        {
+  63   2      #if debug
+                  printf("\n Short_flag = %bd",Short_flag);   
+              #endif  
+  66   2          IO_DSG_MOS = 1;//不放电
+  67   2          ALLOW_DSG_FLAG = 0;
+  68   2        }
+  69   1        else
+  70   1        {
+  71   2          IO_DSG_MOS = 0;//允许放电
+  72   2          ALLOW_DSG_FLAG = 1;
+  73   2        }
+  74   1        
+  75   1      #if (chargedebug|discurdebug)
+  76   1          printf("\n Short_flag= %bd,FOPEN = %bd,Odiff =%bd,UIV =%bd ,OIV= %bd \n",Short_flag,FOPEN,Odiff,UIV,OIV)
+             -;   
+  77   1      #endif
+  78   1      #if (chargedebug|discurdebug)
+  79   1          printf("\n ALLOW_CHG_FLAG= %bd ALLOW_DSG_FLAG = %bd\n",ALLOW_CHG_FLAG,ALLOW_DSG_FLAG);   
+  80   1      #endif
+  81   1      
+  82   1      }
+  83          
+  84          
+  85          #if 1
+  86          /*******************************************************************************************
+  87          * 函数名: updata_pack_fault_flag
+  88          * 参  数: 无
+  89          * 返回值: 无
+  90          * 作  用: 用来更新错误标志位，需要uart发送的
+  91          *********************************************************************************************/
+  92          extern pack_fault_flag packfault_flag;
+  93          //  if(bAFE_OV #|| bCTO#)//断线保护，和硬件过冲         
+  94          //放电  if( bOTD# || bUTD# || bUV# || bOCD# || bAFE_SC# || (bFD&&bDSGEnd) || bLoadConectFlg || bCTO)
+  95          //充电  if(bOTC# || bUTC# || bHV# || bOCC# || (bFC&&bCHGEnd)) //发生过报错 充电中报错   
+  96          //自定义 OIV#，UIV#,FOPEN#，Odiff#，自己的Short_flag短路标志
+  97          
+  98          void updata_pack_fault_flag(void)
+  99          {
+ 100   1          U16 packfaulttemp;
+ 101   1          packfault_flag.pack_flag_bit.pack_UV      = bUV     ; //欠压
+ 102   1          packfault_flag.pack_flag_bit.pack_AFE_OV  = bAFE_OV ; //硬件过充
+ 103   1          packfault_flag.pack_flag_bit.pack_AFE_SC  = bAFE_SC ; //短路
+ 104   1          packfault_flag.pack_flag_bit.pack_OCC     = bOCC    ; //充电过流
+ 105   1          packfault_flag.pack_flag_bit.pack_UTD     = bUTD    ; //放电低温
+ 106   1          packfault_flag.pack_flag_bit.pack_OTD     = bOTD    ; //放电过温
+ 107   1          packfault_flag.pack_flag_bit.pack_UTC     = bUTC    ; //充电低温
+ 108   1          packfault_flag.pack_flag_bit.pack_OTC     = bOTC    ; //充电过温
+ 109   1          
+ 110   1          packfault_flag.pack_flag_bit.pack_OCD     = bOCD    ; //放电过流
+ 111   1          packfault_flag.pack_flag_bit.pack_OCD2    = bOCD2   ;
+ 112   1          packfault_flag.pack_flag_bit.pack_FOPEN   = FOPEN   ; //保险丝熔断
+ 113   1          packfault_flag.pack_flag_bit.pack_Odiff   = Odiff   ; //单节压差超0.3
+ 114   1          packfault_flag.pack_flag_bit.pack_HV      = bHV     ; //软件过充  
+ 115   1          packfault_flag.pack_flag_bit.pack_CTO     = bCTO    ; //电池断线
+C51 COMPILER V9.52.0.0   PROCESS                                                           10/24/2019 15:23:02 PAGE 3   
+
+ 116   1          packfault_flag.pack_flag_bit.pack_UIV     = UIV     ; //充电器电压过低
+ 117   1          packfault_flag.pack_flag_bit.pack_OIV     = OIV     ; //充电器电压过高
+ 118   1      
+ 119   1      
+ 120   1          //  for(i=0;i<16;i++)
+ 121   1          if(++packfault_cnt >= 5)//2.5s  *16一次是16  2.5*16=40正一次，反一次*2  80*25=2s
+ 122   1          {   
+ 123   2            IO_Error_1 = 0;
+ 124   2            IO_Error_2 = 0;
+ 125   2            IO_Error_4 = 0;
+ 126   2            IO_Error_8 = 0;       
+ 127   2            packfault_cnt = 0;
+ 128   2            if(packfault_i >= 16)
+ 129   2            {
+ 130   3              packfault_i = 0;
+ 131   3            }       
+ 132   2            packfaulttemp = (packfault_flag.pack_flag_all&(0x0001 << packfault_i));
+ 133   2            packfault_i++;
+ 134   2          
+ 135   2      
+ 136   2              switch(packfaulttemp) // 1111 1111 1111 1111  ffff
+ 137   2              {
+ 138   3                case 0x0001:  
+ 139   3                  IO_Error_1 = 0;
+ 140   3                  IO_Error_2 = 0;
+ 141   3                  IO_Error_4 = 0;
+ 142   3                  IO_Error_8 = ~IO_Error_8;
+ 143   3                  //Delay1ms(2000);
+ 144   3                  break;
+ 145   3                case 0x0002:
+ 146   3                  IO_Error_1 = 0;
+ 147   3                  IO_Error_2 = 0;
+ 148   3                  IO_Error_4 = ~IO_Error_4;
+ 149   3                  IO_Error_8 = 0;
+ 150   3                  //Delay1ms(2000);
+ 151   3                  break;
+ 152   3                case 0x0004:
+ 153   3                  IO_Error_1 = 0;
+ 154   3                  IO_Error_2 = 0;
+ 155   3                  IO_Error_4 = ~IO_Error_4;
+ 156   3                  IO_Error_8 = ~IO_Error_8;
+ 157   3                  //Delay1ms(2000);
+ 158   3                  break;
+ 159   3                case 0x0008:
+ 160   3                  IO_Error_1 = 0;
+ 161   3                  IO_Error_2 = ~IO_Error_2;
+ 162   3                  IO_Error_4 = 0;
+ 163   3                  IO_Error_8 = 0;
+ 164   3                  //Delay1ms(2000);
+ 165   3                  break;
+ 166   3                case 0x0010:
+ 167   3                  IO_Error_1 = 0;
+ 168   3                  IO_Error_2 = ~IO_Error_2;
+ 169   3                  IO_Error_4 = 0;
+ 170   3                  IO_Error_8 = ~IO_Error_8;
+ 171   3                  //Delay1ms(2000);
+ 172   3                  break;
+ 173   3                case 0x0020:
+ 174   3                  IO_Error_1 = 0;
+ 175   3                  IO_Error_2 = ~IO_Error_2;
+ 176   3                  IO_Error_4 = ~IO_Error_4;
+ 177   3                  IO_Error_8 = 0;
+C51 COMPILER V9.52.0.0   PROCESS                                                           10/24/2019 15:23:02 PAGE 4   
+
+ 178   3                  //Delay1ms(2000);
+ 179   3                  break;
+ 180   3                case 0x0040:
+ 181   3                  IO_Error_1 = 0;
+ 182   3                  IO_Error_2 = ~IO_Error_2;
+ 183   3                  IO_Error_4 = ~IO_Error_4;
+ 184   3                  IO_Error_8 = ~IO_Error_8;
+ 185   3                  //Delay1ms(2000);
+ 186   3                  break;
+ 187   3                case 0x0080:
+ 188   3                  IO_Error_1 = ~IO_Error_1;
+ 189   3                  IO_Error_2 = 0;
+ 190   3                  IO_Error_4 = 0;
+ 191   3                  IO_Error_8 = 0;
+ 192   3                  //Delay1ms(2000);
+ 193   3                  break;
+ 194   3                case 0x0100:
+ 195   3                  IO_Error_1 = ~IO_Error_1;
+ 196   3                  IO_Error_2 = 0;
+ 197   3                  IO_Error_4 = 0;
+ 198   3                  IO_Error_8 = ~IO_Error_8;
+ 199   3                  //Delay1ms(2000);
+ 200   3                  break;
+ 201   3                case 0x0200:
+ 202   3                  IO_Error_1 = ~IO_Error_1;
+ 203   3                  IO_Error_2 = 0;
+ 204   3                  IO_Error_4 = ~IO_Error_4;
+ 205   3                  IO_Error_8 = 0;
+ 206   3                  //Delay1ms(2000);
+ 207   3                  break;
+ 208   3                case 0x0400:
+ 209   3                  IO_Error_1 = ~IO_Error_1;
+ 210   3                  IO_Error_2 = 0;
+ 211   3                  IO_Error_4 = ~IO_Error_4;
+ 212   3                  IO_Error_8 = ~IO_Error_8;
+ 213   3                  //Delay1ms(2000);
+ 214   3                  break;
+ 215   3                case 0x0800:
+ 216   3                  IO_Error_1 = ~IO_Error_1;
+ 217   3                  IO_Error_2 = ~IO_Error_2;
+ 218   3                  IO_Error_4 = 0;
+ 219   3                  IO_Error_8 = 0;
+ 220   3                  //Delay1ms(2000);
+ 221   3                  break;
+ 222   3                case 0x1000:
+ 223   3                  IO_Error_1 = ~IO_Error_1;
+ 224   3                  IO_Error_2 = ~IO_Error_2;
+ 225   3                  IO_Error_4 = 0;
+ 226   3                  IO_Error_8 = ~IO_Error_8;
+ 227   3                  //Delay1ms(2000);
+ 228   3                  break;
+ 229   3                case 0x2000:
+ 230   3                  IO_Error_1 = ~IO_Error_1;
+ 231   3                  IO_Error_2 = ~IO_Error_2;
+ 232   3                  IO_Error_4 = ~IO_Error_4;
+ 233   3                  IO_Error_8 = 0;
+ 234   3                  //Delay1ms(2000);
+ 235   3                  break;
+ 236   3                case 0x4000:
+ 237   3                  IO_Error_1 = ~IO_Error_1;
+ 238   3                  IO_Error_2 = ~IO_Error_2;
+ 239   3                  IO_Error_4 = ~IO_Error_4;
+C51 COMPILER V9.52.0.0   PROCESS                                                           10/24/2019 15:23:02 PAGE 5   
+
+ 240   3                  IO_Error_8 = ~IO_Error_8;
+ 241   3                //Delay1ms(2000);
+ 242   3                  break;
+ 243   3                case 0x8000:
+ 244   3                  if(++fault_cntoiv >= 2)
+ 245   3                  {
+ 246   4                    fault_cntoiv = 0;
+ 247   4                    IO_Error_1 = ~IO_Error_1;
+ 248   4                    IO_Error_2 = ~IO_Error_2;
+ 249   4                    IO_Error_4 = ~IO_Error_4;
+ 250   4                    IO_Error_8 = ~IO_Error_8;
+ 251   4                  }
+ 252   3                  break;
+ 253   3                default:
+ 254   3                  IO_Error_1 = 0;
+ 255   3                  IO_Error_2 = 0;
+ 256   3                  IO_Error_4 = 0;
+ 257   3                  IO_Error_8 = 0;
+ 258   3                  break;
+ 259   3              }
+ 260   2            
+ 261   2            }
+ 262   1      
+ 263   1          
+ 264   1      }
+ 265          
+ 266          
+ 267          
+ 268          
+ 269          
+ 270          #endif
+ 271          /****************************************20190925增加地刷保护******************************************/
+ 272              
+ 273            
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =   1054    ----
+   CONSTANT SIZE    =    106    ----
+   XDATA SIZE       =      1       2
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

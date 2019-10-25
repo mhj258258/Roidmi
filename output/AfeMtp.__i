@@ -1,0 +1,1 @@
+"code\AfeMtp.c" LARGE OPTIMIZE (7,SPEED) BROWSE INCDIR(.\header;.\roidmi\inc) DEBUG OBJECTEXTEND PRINT(.\output\AfeMtp.lst) TABS (2) OBJECT(.\output\AfeMtp.obj)

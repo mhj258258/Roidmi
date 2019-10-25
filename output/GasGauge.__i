@@ -1,0 +1,1 @@
+"code\GasGauge.c" LARGE OPTIMIZE (7,SPEED) BROWSE INCDIR(.\header;.\roidmi\inc) DEBUG OBJECTEXTEND PRINT(.\output\GasGauge.lst) TABS (2) OBJECT(.\output\GasGauge.obj)

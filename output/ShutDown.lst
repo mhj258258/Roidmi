@@ -1,0 +1,410 @@
+C51 COMPILER V9.52.0.0   SHUTDOWN                                                          10/24/2019 15:16:23 PAGE 1   
+
+
+C51 COMPILER V9.52.0.0, COMPILATION OF MODULE SHUTDOWN
+OBJECT MODULE PLACED IN .\output\ShutDown.obj
+COMPILER INVOKED BY: C:\Program Files (x86)\keil 51\C51\BIN\C51.EXE code\ShutDown.c LARGE OPTIMIZE(7,SPEED) BROWSE INCDI
+                    -R(.\header;.\roidmi\inc) DEBUG OBJECTEXTEND PRINT(.\output\ShutDown.lst) TABS(2) OBJECT(.\output\ShutDown.obj)
+
+line level    source
+
+   1          /********************************************************************************
+   2          Copyright (C), Sinowealth Electronic. Ltd.
+   3          Author:   andyliu
+   4          Version:  V0.0
+   5          Date:     2014/05/30
+   6          History:
+   7            V0.0    2014/05/30     Preliminary
+   8          ********************************************************************************/
+   9          #include "system.h"
+  10          #include "AfeMtp.h"
+  11          #include "Calibrate.h"
+  12          void AFE_MODE2Idle(void);
+  13          
+  14          extern void InitClk(void);
+  15          
+  16          /*******************************************************************************
+  17          Function: WakeUpProcess(void)
+  18          Description:  
+  19          Input:    
+  20          Output: 
+  21          Others:
+  22          *******************************************************************************/
+  23          void WakeUpProcess(void)
+  24          {
+  25   1        bWakeupFlg = 0;
+  26   1        if(bIdleFlg || bPDFlg)
+  27   1        {
+  28   2          InitClk();
+  29   2      
+  30   2          bPDFlg = 0;
+  31   2          bIdleFlg = 0;
+  32   2          ucIdleTimerCnt = 0;
+  33   2          ucPDTimerCnt = 0;    
+  34   2          ucTimer3Cnt = 0;
+  35   2      
+  36   2          InitIRQ();
+  37   2      
+  38   2          REG.AFEINTEN = 0x6C;          //Enable SC£¨Ó²¼þ¶ÌÂ·£©, OV£¨Ó²¼þ¹ý³ä±£»¤£©, CD£¨³ä·Åµç×´Ì¬ÖÐ¶Ï£© ÖÐ¶Ï±¨¾¯Ê¹ÄÜ
+  39   2          TWIWriteAFE(AFE_INT_EN, &REG.AFEINTEN);
+  40   2        
+  41   2          REG.AFESCONF1 |= 0x10;          //Enable WDT
+  42   2          TWIWriteAFE(AFE_SCONF1, &REG.AFESCONF1);
+  43   2      #if debug
+                  printf("\n -----WakeUp from idle or pd-----\n");    
+              #endif  
+  46   2        }
+  47   1      
+  48   1          ucIdleTimerCnt = 0;
+  49   1          ucPDTimerCnt = 0;
+  50   1          bPCSleepFlg = 0;
+  51   1          bIdleFlg = 0; 
+  52   1          ucUartTimeoutCnt = 0;   
+  53   1      }
+  54          
+C51 COMPILER V9.52.0.0   SHUTDOWN                                                          10/24/2019 15:16:23 PAGE 2   
+
+  55          
+  56          /*******************************************************************************
+  57          Function: SystemIntoPD(void)
+  58          Description:  
+  59          Input:    
+  60          Output: 
+  61          Others:
+  62          *******************************************************************************/
+  63          void SystemIntoPD(void) 
+  64          { 
+  65   1        
+  66   1      #if 1 //½øÈëPDµÄÌõ¼þ£º1,²»·Åµç²»³äµç×´Ì¬ÏÂUV£¬2.´®¿ÚÃüÁî 3.CTO¶ÏÏß
+  67   1      #if debug
+                    printf("-------------AFE IntoPowerDown-----------\n");
+              #endif  
+  70   1      
+  71   1        IntoPowerDown();    //Ö»ÓÐ²å³äµçÆ÷ºÍuartÃüÁîÄÜ»½ÐÑ-->Õâ¸öÊÇÕë¶ÔAFEµÄpdµÄ
+  72   1        
+  73   1      #if 0
+              /-------------------------------------------------------------
+                if(!( OIV|| UIV || FOPEN || Odiff ||Short_flag))
+                {
+                  EA = 0;
+                  IEN0 = 0x10;              //´®¿Ú£¬¶¨Ê±Æ÷
+                  IEN1 = 0x00;  
+                  EA = 1;
+              #if debug
+                    printf("-------------MCU into idle PDº¯Êý------------\n");
+              #endif
+                  IntoIdle();             //MCU½øÈëidle
+                }
+              /-------------------------------------------------------------- 
+              #else //ÓÉÓÚAFE¶¼¹Ø±ÕÁË£¬MCU¿ªÔÚÄÇÒ²Ã»ÓÐÊ²Ã´ÒâÒå
+  88   1          //ËùÒÔÕâ±ß¾Í¹Ø±ÕËùÓÐµç
+  89   1          
+  90   1          IO_POWER_ON = 0;
+  91   1      #endif
+  92   1        
+  93   1        
+  94   1        
+  95   1      #else
+                //PWM2CON &= ~0x01;
+                //DSG1PWM = 0;
+                
+                //bBLEOPEN = 0;
+                //IO_BLEPW = 1;
+                
+                IEN0 = 0x00;              //disable Interrupt
+                IEN1 = 0x00;            
+                //LEDOff;                   //shut down LED
+              
+                IntoPowerDown();  
+              #endif
+ 108   1      }
+ 109          
+ 110          
+ 111          /*******************************************************************************
+ 112          Function: SystemIntoIdle(void)
+ 113          Description:  
+ 114          Input:    
+ 115          Output: 
+ 116          Others:
+C51 COMPILER V9.52.0.0   SHUTDOWN                                                          10/24/2019 15:16:23 PAGE 3   
+
+ 117          *******************************************************************************/
+ 118          void SystemIntoIdle(void)    
+ 119          { 
+ 120   1        REG.AFESCONF1 &= ~0x10;         //¹Ø±ÕWDT
+ 121   1        TWIWriteAFE(AFE_SCONF1, &REG.AFESCONF1);
+ 122   1      
+ 123   1        REG.AFEINTEN = 0x70;          //¿ªÆôSC,OV,CDµÄAlarm¹¦ÄÜ
+ 124   1        TWIWriteAFE(AFE_INT_EN, &REG.AFEINTEN);
+ 125   1      #if debug
+                    printf("-------------½øÈëÁËµÍ¹¦ºÄÄ£Ê½2------------\n");
+              #endif
+ 128   1      //  LEDOff;               //shut down LED
+ 129   1      //  bBLEOPEN = 0;
+ 130   1      //  IO_BLEPW = 1;
+ 131   1      //  PWM2CON &= ~0x01;
+ 132   1      //  if(bDSGMOS)
+ 133   1      //  {
+ 134   1      //    DSG1PWM = 1;
+ 135   1      //  }
+ 136   1      //  else
+ 137   1      //  {
+ 138   1      //    DSG1PWM = 0;
+ 139   1      //  }
+ 140   1      //ÒòÎªÕâ±ßÃ»ÓÐ32.768Õâ±ß
+ 141   1      #if 0 //by tomi
+                CLKCON &= ~0x04;          //Set sysclk 32kHz 1111 1011
+                _nop_();
+                _nop_();
+                _nop_();
+                _nop_();
+                CLKCON &= ~0x08;          //Close  sysclk 24MHz
+              #endif
+ 149   1      
+ 150   1      #if 1 //mcu½øÈëidle
+ 151   1      
+ 152   1      //Ôö¼ÓMCU±£»¤µÄÅÐ¶Ï
+ 153   1        if(!( OIV|| UIV || FOPEN || Odiff ||Short_flag))
+ 154   1        {
+ 155   2          EA = 0;
+ 156   2          IEN0 = 0x10;            //0001 0000 ¿ªÆô¾Í¿ªÆô´®¿ÚÖÐ¶Ï£¬¶¨Ê±Æ÷ÖÐ¶Ï
+ 157   2          IEN1 = 0x08;            //Enable INT4
+ 158   2          IENC = 0x10;            //Enable INT44 ÊÖ¶¯
+ 159   2          IENC |= 0x80;           //INT47      ALARMÖÐ¶Ï 1000 0000
+ 160   2          EA = 1;
+ 161   2      #if debug
+                  printf("-------------MCU into idle1------------\n");
+              #endif
+ 164   2          IntoIdle();             //MCU½øÈëidle
+ 165   2        }
+ 166   1      
+ 167   1      #else //Õâ±ßÊÇMCU½øÈëPD
+                EA = 0;
+                IEN0 = 0x10;            //enable es0
+                IEN1 = 0x08;            //Enable INT4
+                IENC = 0x10;            //Enable INT44
+              //  IENC |= 0x40;           //INT46       WAKEUP
+                EA = 1;
+              
+                IntoPD();             //MCU into PD
+              #endif
+ 177   1      }
+ 178          
+C51 COMPILER V9.52.0.0   SHUTDOWN                                                          10/24/2019 15:16:23 PAGE 4   
+
+ 179          
+ 180          /*******************************************************************************
+ 181          Function: LowPowerCheck(void)
+ 182          Description:  
+ 183          Input:    
+ 184          Output: 
+ 185          Others:
+ 186          *******************************************************************************/
+ 187          void LowPowerCheck(void)
+ 188          {
+ 189   1      #if debug
+                  printf("\n -----LowPowerCheck----- bLEDOpen\n");    
+              #endif
+ 192   1        //uart·¢ËÍÀ´µÄ½øÈëµÍ¹¦ºÄ
+ 193   1        if(bPCSleepFlg && bUartSndAckFlg)//ÕâÊÇ´®¿Ú·¢ËÍ¹ýÀ´Òª½øÈëPDµÄÃüÁî
+ 194   1        {
+ 195   2          bPCSleepFlg = 0;
+ 196   2          bPDFlg = 1; 
+ 197   2      #if debug
+                  printf("\n -----bPDFlg is 1(uart)----- \n");    
+              #endif    
+ 200   2        }
+ 201   1        //¶ÏÏß,mcuÉÏ´«´íÎóºó£¬mcuÒª²»¶Ï¼ì²âcto £¬ËùÒÔmcu²»idle
+ 202   1        else if(bCTO)//ÓÉÓÚÏÖÔÚCTOÊÇÍâ²¿MUC¼ì²â²»Ëµmcu²»ÄÜidle
+ 203   1        {
+ 204   2            if(++ucPDTimerCnt >= E2ucDeleyLowPower)
+ 205   2            {
+ 206   3              ucPDTimerCnt = E2ucDeleyLowPower;
+ 207   3              bPDFlg = 1;   
+ 208   3      #if debug
+                  printf("\n -----bPDFlg is 1(cto¶ÏÏß)----- \n");    
+              #endif    
+ 211   3            }
+ 212   2        }
+ 213   1        //Õâ±ßÒª
+ 214   1        else if(!bLEDOpen)          //LED display off and then wait to enter a low-power
+ 215   1        {
+ 216   2      #if 0
+                  printf("\n -----$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$----- \n");    
+              #endif  
+ 219   2          //²»ÔÚ³äµçÒ²²»ÔÚ·Åµç
+ 220   2          if(!bCHGING && !bDSGING)
+ 221   2          {
+ 222   3            //Èç¹û²»ÔÚ³äµçÒ²²»ÔÚ·Åµç,ÓÐÇ·Ñ¹±êÖ¾,AFE½øÈëPD£¬mcuÔÚÃ»ÓÐÆäËû±êÖ¾Î»µÄÊ±ºò£¬Ò²½øÈëidle£¬ÇÒÖ»Òª²åÉÏµçÂú25m
+             -s¾Í»á×Ô¶¯ÍË³öAFEµÍ¹¦ºÄ
+ 223   3              if(bUV)
+ 224   3              {
+ 225   4      #if debug
+                  printf("\n -----bPDFlg is 1(bUVÇ·Ñ¹ÇÒ²»ÔÙ³äµçÒ²²»ÔÚ·Åµç)----- \n");    
+              #endif  
+ 228   4                if(++ucPDTimerCnt >= E2ucDeleyLowPower) //20
+ 229   4                {
+ 230   5                  ucPDTimerCnt = E2ucDeleyLowPower;
+ 231   5                  bPDFlg = 1;   
+ 232   5                  
+ 233   5      #if debug
+                  printf("\n -----bPDFlg is 1(bUVÇ·Ñ¹ÇÒ²»ÔÙ³äµçÒ²²»ÔÚ·Åµç)----- \n");    
+              #endif    
+ 236   5                }
+ 237   4              }
+ 238   3              //Èç¹û²»ÔÚ·ÅµçÒ²²»ÔÚ³äµçÒ»¶ÎÊÂ¼þºó×Ô¼ºÒ²½øÈë´ý»úÄ£Ê½
+ 239   3              else
+C51 COMPILER V9.52.0.0   SHUTDOWN                                                          10/24/2019 15:16:23 PAGE 5   
+
+ 240   3              {
+ 241   4      #if 0
+                  printf("\n -----%%%%%%%%%%%%%%%%%%%%%%%%%----- \n");    
+              #endif            
+ 244   4                  ucPDTimerCnt = 0;
+ 245   4      //bAFE_OV, bCTO,bOTD#, bUTD#, bUV#,bOCD,bAFE_SC#,(bFD&&bDSGEnd),bLoadConectFlg,bOTC,bUTC,bHV#,bOCC#,bFC&&b
+             -CHGEnd,OIV,UIV,FOPEN,Odiff,Short_flag
+ 246   4                      //ÐèÒªtomi¸ü¸Ä,Ê²Ã´Çé¿öÏÂ½øÈëidleÄ£Ê½
+ 247   4                  //   if(!(bOTC | bUTC | bHV | bOCC | bOTD | bUTD | bUV | bOCD | bAFE_SC))
+ 248   4                      //if(!(bOTC | bUTC | bHV | bOCC | bOTD | bUTD | bUV | bOCD | bOCD2 | bAFE_SC))
+ 249   4                      if(!(bOTC | bUTC | bHV | bOCC | bOTD | bUTD | bUV | bOCD | bOCD2 | bAFE_SC | bAFE_OV ))
+ 250   4                      {
+ 251   5      #if debug
+                  printf("\n -----**************************ucIdleTimerCnt = %bd----- \n",ucIdleTimerCnt);    
+              #endif    
+ 254   5                        if(++ucIdleTimerCnt >= E2ucDeleyLowPower)//E2ucDeleyLowPower =14
+ 255   5                        {
+ 256   6          
+ 257   6                          ucIdleTimerCnt = E2ucDeleyLowPower;
+ 258   6                          bIdleFlg = 1;   
+ 259   6      #if debug
+                  printf("\n -----bIdleFlg is 1(Ã»ÓÐbOTC | bUTC | bHV | bOCC | bOTD | bUTD | bUV | bOCD | bAFE_SC´íÎó)----
+             -- \n");    
+              #endif
+ 262   6                        }
+ 263   5                      }
+ 264   4                      else
+ 265   4                      {
+ 266   5                          ucIdleTimerCnt = 0;
+ 267   5                      }
+ 268   4              }
+ 269   3          }
+ 270   2          else
+ 271   2          {
+ 272   3            ucIdleTimerCnt = 0;
+ 273   3            ucPDTimerCnt = 0;
+ 274   3          }
+ 275   2        }
+ 276   1        else
+ 277   1        {
+ 278   2          ucIdleTimerCnt = 0;
+ 279   2          ucPDTimerCnt = 0;
+ 280   2        }
+ 281   1      
+ 282   1      }
+ 283          
+ 284          
+ 285          /*******************************************************************************
+ 286          Function: LowPowerProcess(void)
+ 287          Description:  
+ 288          Input:    
+ 289          Output: 
+ 290          Others:
+ 291          *******************************************************************************/
+ 292          void LowPowerProcess(void)
+ 293          {
+ 294   1        if(!bIdleFlg && !bPDFlg)
+ 295   1        {
+ 296   2          EA = 0;
+ 297   2          if(!(bKeyFlg | bAlarmFlg | bCADCFlg | bCalibrationFlg | bUpdataFlashFlg | bWakeupFlg | bISPFlg | bVADCFl
+             -g | bTimer1sFlg) && (ucResetFlag!=0x12))
+ 298   2          {
+C51 COMPILER V9.52.0.0   SHUTDOWN                                                          10/24/2019 15:16:23 PAGE 6   
+
+ 299   3      #if debug
+                  printf("\n ~~~~~~muc Idle~~~~~~\n");    
+              #endif
+ 302   3            EA = 1;
+ 303   3            IntoIdle();
+ 304   3          }
+ 305   2          EA = 1;   
+ 306   2        }
+ 307   1        else if(bPDFlg)
+ 308   1        {
+ 309   2      #if debug
+                  printf("\n ~~~~~~AFE IntoPD~~~~~~\n");    
+              #endif
+ 312   2          SystemIntoPD();
+ 313   2        }
+ 314   1        else if(bIdleFlg)
+ 315   1        {
+ 316   2      #if debug
+                  printf("\n ~~~~~~AFE mode2 £¬MCU idle ~~~~~~\n");    
+              #endif
+ 319   2          //·ÀÖ¹³öÏÖIO¿ÚÈÔ¿ª×ÅµÄ×´Ì¬
+ 320   2          IO_CHG_MOS = 1;//¹Ø±Õmos
+ 321   2          IO_DSG_MOS = 1;
+ 322   2          
+ 323   2          SystemIntoIdle();
+ 324   2        }
+ 325   1      
+ 326   1      }
+ 327          
+ 328          //roidmiµÄ½øÈëµÍ¹¦ºÄµÄ·½Ê½
+ 329          //(1)²»¿ª»ú:ÔËÊä×´Ì¬
+ 330          //(2)¿ª»ú£ºmcu £¨Ã»ÓÐ´íÎóµÄÊ±ºò£¬idleÇ°mos¹Ü×´Ì¬ÊÇ¿ªÆôµÄ£©idle£¬¼È²»·ÅµçÒ²²»³äµçÇé¿öÏÂ£¬AFE¹ýÒ»¶ÎÊ±¼äºó×Ô¶
+             -¯½øÈëÄ£Ê½2      ¿É±»³ä·ÅµçµçÁ÷»½ÐÑ
+ 331          //(3)¿ª»ú£ºmcu idle,AFE½øÈëPOWER DOWN,ÒòÎªscºÍovÊÇÓ²¼þ±£»¤£¬ËùÒÔÖ±½Ó½øÈëpowerdownÒ²Ã»¹ØÏµ£¨Èç¹ûMUCÒª½øPD£¬
+             -ÄÇÃ´±ØÐëÓÐ°´¼ü£©
+ 332          //(4)¿ª»ú£ºÕý³£ÔËÐÐ
+ 333          //´ý»ú×´Ì¬£¬²»³äµçÒ²²»·Åµç£¬½ö½ö¿ªÆô¶ÌÂ·±£»¤
+ 334          
+ 335          
+ 336          
+ 337          //(2)¹¤×÷Ä£Ê½2£¬AFE¼ì²âµ½³ä·ÅµçÐ¡µçÁ÷»á²úÉúALarmÖÐ¶Ï£¬´Ó¶ø»½ÐÑMCU
+ 338          //Ç°ÌáÌõ¼þ²»·ÅµçÒ²²»³äµç
+ 339          void AFE_MODE2Idle(void)
+ 340          {
+ 341   1        //AFEÏÈ½øÈëÄ£Ê½2
+ 342   1        REG.AFESCONF1 &=~0x10; //0001 0000 //¹Ø±ÕWDT
+ 343   1        TWIWriteAFE(AFE_SCONF1,&REG.AFESCONF1);
+ 344   1      
+ 345   1        REG.AFEINTEN = 0x70; //0111 0000  £»Ó²¼þ¹ý³å£¬³ä·Åµç×´Ì¬ÖÐ¶ÏÊ¹ÄÜ£¬CADCÖÐ¶ÏÊ¹ÄÜÎ»
+ 346   1        TWIWriteAFE(AFE_INT_EN,&REG.AFEINTEN);    
+ 347   1      }
+ 348          
+ 349          ////(3)¿ª»ú£ºmcu idle,AFE½øÈëÄ£Ê½PDÄ£Ê½ 
+ 350          //void AFE_MCU_ManuIdle(void)
+ 351          //{
+ 352          //  REG.AFESCONF1 &=~0x10; //0001 0000 //¹Ø±ÕWDT
+ 353          //  TWIWriteAFE(AFE_SCONF1,&REG.AFESCONF1);
+ 354          
+ 355          //  REG.AFEINTEN = 0x70; //0111 0000  £»Ó²¼þ¹ý³å£¬³ä·Åµç×´Ì¬ÖÐ¶ÏÊ¹ÄÜ£¬CADCÖÐ¶ÏÊ¹ÄÜÎ»
+ 356          //  TWIWriteAFE(AFE_INT_EN,&REG.AFEINTEN);  
+ 357          //  
+ 358          //  
+C51 COMPILER V9.52.0.0   SHUTDOWN                                                          10/24/2019 15:16:23 PAGE 7   
+
+ 359          //}
+ 360          
+ 361          
+ 362          
+ 363          
+ 364          
+ 365          
+ 366          
+ 367          
+ 368          
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    399    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

@@ -1,0 +1,1 @@
+"roidmi\src\process.c" LARGE OPTIMIZE (7,SPEED) BROWSE INCDIR(.\header;.\roidmi\inc) DEBUG OBJECTEXTEND PRINT(.\output\process.lst) TABS (2) OBJECT(.\output\process.obj)

@@ -1,0 +1,1234 @@
+C51 COMPILER V9.52.0.0   UART                                                              10/24/2019 11:21:00 PAGE 1   
+
+
+C51 COMPILER V9.52.0.0, COMPILATION OF MODULE UART
+OBJECT MODULE PLACED IN .\output\Uart.obj
+COMPILER INVOKED BY: C:\Program Files (x86)\keil 51\C51\BIN\C51.EXE code\Uart.c LARGE OPTIMIZE(7,SPEED) BROWSE INCDIR(.\
+                    -header;.\roidmi\inc) DEBUG OBJECTEXTEND PRINT(.\output\Uart.lst) TABS(2) OBJECT(.\output\Uart.obj)
+
+line level    source
+
+   1          /********************************************************************************
+   2          Copyright (C), Sinowealth Electronic. Ltd.
+   3          Author:   andyliu
+   4          Version:  V0.0
+   5          Date:     2014/05/30
+   6          History:
+   7            V0.0    2014/05/30     Preliminary
+   8          ********************************************************************************/
+   9          #include "system.h"
+  10          #include "ISP.h"
+  11          #include "stdio.h"
+  12          #include "string.h"
+  13          bit tomi_rx_handle(void);
+  14          /*******************************************************************************
+  15          Function: Page1WrRdFuncTable()
+  16          Description:
+  17          Input:  NULL  
+  18          Output: NULL
+  19          Others: NULL
+  20          *******************************************************************************/
+  21          U16 code Page1WrRdFuncTable[18]=
+  22          {
+  23              SYS_PARA_MAP_ADDR,               //SubClassID 0x00
+  24              SYSINFO_MAP_ADDR,               //0x01
+  25              CHG_PARA_MAP_ADDR,               //0x02
+  26              DSG_PARA_MAP_ADDR,               //0x03
+  27              0x00,
+  28              DSG_PWM_PARA_MAP_ADDR,            //0x04
+  29              CHG_TEMP_PARA_MAP_ADDR,           //0x05
+  30              DSG_TEMP_PARA_MAP_ADDR,           //0x06                           //0x07
+  31              BAL_PARA_MAP_ADDR,               //0x08
+  32              0x00,                           //0x09
+  33              AFE_PARA_MAP_ADDR,               //0x0A
+  34              CALI_PARA_MAP_ADDR,              //0x0B
+  35              DataflashCheck_Map_ADDR,        //0x0C
+  36              0x00,                           //0x0D
+  37              0x00,                           //0x0E
+  38              0x00,                           //0x0F
+  39              0x00,                           //0x10
+  40              0x00,                           //0x11
+  41          };
+  42              
+  43          /*******************************************************************************
+  44          Function: Page2WrRdFuncTable()
+  45          Description:
+  46          Input:  NULL  
+  47          Output: NULL
+  48          Others: NULL
+  49          *******************************************************************************/
+  50          U16 code Page2WrRdFuncTable[18]=
+  51          {
+  52              SYS_PARA_MAP_ADDR+32,            //SubClassID 0x00
+  53              SYSINFO_MAP_ADDR+32,            //0x01
+  54              CHG_PARA_MAP_ADDR+32,            //0x02
+C51 COMPILER V9.52.0.0   UART                                                              10/24/2019 11:21:00 PAGE 2   
+
+  55              DSG_PARA_MAP_ADDR+32,            //0x03
+  56            0x00,
+  57              DSG_PWM_PARA_MAP_ADDR+32,         //0x04
+  58              CHG_TEMP_PARA_MAP_ADDR+32,        //0x05
+  59              DSG_TEMP_PARA_MAP_ADDR+32,        //0x06                           //0x07
+  60              BAL_PARA_MAP_ADDR+32,            //0x08
+  61              0x00,                           //0x09
+  62              AFE_PARA_MAP_ADDR+32,            //0x0A
+  63              CALI_PARA_MAP_ADDR+32,           //0x0B
+  64              DataflashCheck_Map_ADDR+32,     //0x0C
+  65              0x00,                           //0x0D
+  66              0x00,                           //0x0E
+  67              0x00,                           //0x0F
+  68              0x00,                           //0x10
+  69              0x00,                           //0x11
+  70          };
+  71          
+  72          /*******************************************************************************
+  73          Function: InitUART0()
+  74          Description: Init UART1  
+  75          Input:  NULL
+  76          Output: NULL
+  77          Others:
+  78          *******************************************************************************/
+  79          void InitUART0(void)
+  80          {
+  81   1        
+  82   1        UART0CR = 0x54; //txºÍrxµÄÒý½ÅÓ³ÉäÅäÖÃ
+  83   1                        //0011 0010 -->   0101 0100
+  84   1                        //tx£º011Ó³Éäµ½p0.7  -->  P2.5:101
+  85   1                      //  rx£º010 Ó³Éäµ½ p0.6  --> P2.4:100
+  86   1        
+  87   1        PCON = 0x00;  // [7]SMOD 0:·½Ê½2ÖÐ£¬²¨ÌØÂÊÎ»ÏµÍ³Ê±ÖÓµÄ1/64
+  88   1                      // [6]SSTA 0:ÉèÖÃÎªsm0£¬sm1£¬sm2
+  89   1        SCON = 0x50;  //0101 0000
+  90   1                      //ÅäÖÃUart¹¤×÷ÔÚÄ£Ê½1 [7:6]   00 :·½Ê½0 Í¬²½·½Ê½£¬¹Ì¶¨²¨ÌØÂÊ SSTAT = 0
+  91   1                      //                            01 :·½Ê½1 8Î»Òì²½·½Ê½£¬¿É±ä²¨ÌØÂÊ
+  92   1                      //                    [5]     0:ÔÚ·½Ê½1ÏÂ£¬½ûÖ¹Í£Ö¹Î»È·ÈÏ¼ìÑé £¬ÈÎºÎÍ£Ö¹Î»¶¼»áÖÃÎ»RI
+  93   1                      //                    [4] REN 1  0:½ÓÊÕ½ûÖ¹£¬ 1£º½ÓÊÕÔÊÐí
+  94   1        SBRTH = 0xff;   //ÅäÖÃ²¨ÌØÂÊ²ÎÊý£¬²¨ÌØÂÊ9600
+  95   1        SBRTL = 0x64;   //¼ÆËã¹«Ê½£º(int)X=FSY/(16*²¨ÌØÂÊ) ;  SBRT=32768-X  ;   SFINE=£¨FSY/²¨ÌØÂÊ£©-16*X   FSY=24
+             -M
+  96   1        SFINE = 0x04;   //²¨ÌØÂÊ·¢ÉúÆ÷Î¢µ÷
+  97   1        SADDR = 0x0A;   //Euart0µÄ´Ó»úµØÖ·
+  98   1        SADEN = 0xFF;
+  99   1      
+ 100   1      
+ 101   1        ucUartBufPT = 0;
+ 102   1        ucUartTimeoutCnt = 0;
+ 103   1      }
+ 104          
+ 105          
+ 106          /*******************************************************************************
+ 107          Function:ISPHandshake() 
+ 108          Description:  Processing ISP Handshake
+ 109          Input:   NULL
+ 110          Output: NULL
+ 111          Others:
+ 112          *******************************************************************************/
+ 113          //U8 code ISPCODE[8] = {0x05,0x0a,0x09,0x06,'I','S','P'};
+ 114          U8 code ISPCODE[10] = {0,7,0x05,0x0a,0x09,0x06,'I','S','P'};
+ 115          void ISPHandshake(void)
+C51 COMPILER V9.52.0.0   UART                                                              10/24/2019 11:21:00 PAGE 3   
+
+ 116          {
+ 117   1        U8 i;
+ 118   1        
+ 119   1        for(i=0; i<9; i++)
+ 120   1        {
+ 121   2          if(ucUartBuf[2+i] != ISPCODE[i])
+ 122   2          {
+ 123   3            UART_SEND_NACK;
+ 124   3            return;                  
+ 125   3          }
+ 126   2        }
+ 127   1        bISPFlg = 1;
+ 128   1        bUartSndAckFlg = 0;
+ 129   1        UART_SEND_ACK;
+ 130   1      }
+ 131          
+ 132          
+ 133          /*******************************************************************************
+ 134          Function:UartHandshake() 
+ 135          Description:  PC and slave handshake
+ 136          Input:  NULL
+ 137          Output: NULL
+ 138          Others:
+ 139          *******************************************************************************/
+ 140          void UartHandshake(void)
+ 141          {
+ 142   1        if(ucUartBuf[2] == 0x00)        //Testing equipment is properly
+ 143   1        {
+ 144   2          UART_SEND_ACK;
+ 145   2        }
+ 146   1        else
+ 147   1        {
+ 148   2          UART_SEND_NACK;
+ 149   2        }
+ 150   1      }
+ 151          
+ 152          
+ 153           /*******************************************************************************
+ 154          Function:UartWriteInfo() 
+ 155          Description:  write the information: MCU Info
+ 156          Input:  *prt---Data storage address
+ 157          Output: NULL
+ 158          Others:
+ 159          *******************************************************************************/
+ 160          void UartWriteInfo(U8 xdata *ptr)                   //PC write to MCU
+ 161          {
+ 162   1        U8 i;
+ 163   1        
+ 164   1        if(ucUartBuf[3+ucUartBuf[UART_LENGTH]] == CRC8cal(&ucUartBuf, ucUartBuf[UART_LENGTH]+3))
+ 165   1        {
+ 166   2          for(i=0; i<ucUartBuf[UART_LENGTH]; i++)
+ 167   2          {
+ 168   3            RSTSTAT = 0x00;
+ 169   3            *ptr = ucUartBuf[3+i];
+ 170   3            ptr++;
+ 171   3          }
+ 172   2          
+ 173   2          bWriteFlashFlg = 1;         //Updated parameters, and written to the flash
+ 174   2      //        UpEepromWithDelay();
+ 175   2          ucWriteFlashCnt=0;
+ 176   2          
+ 177   2          UART_SEND_ACK;
+C51 COMPILER V9.52.0.0   UART                                                              10/24/2019 11:21:00 PAGE 4   
+
+ 178   2        }
+ 179   1        else
+ 180   1        {
+ 181   2          UART_SEND_NACK;
+ 182   2        }
+ 183   1      }
+ 184          
+ 185          
+ 186           /*******************************************************************************
+ 187          Function:UartReadInfo() 
+ 188          Description:  Read the information: Battery Info, MCU Info, MTP Info
+ 189          Input:  *prt---Data storage address
+ 190          Output: NULL
+ 191          Others:
+ 192          *******************************************************************************/
+ 193          void UartReadInfo(U8 xdata *ptr)
+ 194          {
+ 195   1        U8 i;
+ 196   1      
+ 197   1        if(ucUartBuf[UART_LENGTH] > 140)
+ 198   1        {
+ 199   2          ucUartBuf[UART_LENGTH] = 0;
+ 200   2        }
+ 201   1        
+ 202   1        for(i=0; i<ucUartBuf[UART_LENGTH]; i++)
+ 203   1        {
+ 204   2          RSTSTAT = 0x00;
+ 205   2          ucUartBuf[3+i] =  *ptr;
+ 206   2          ptr++;
+ 207   2        }
+ 208   1        ucUartBuf[3+ucUartBuf[UART_LENGTH]] = CRC8cal(&ucUartBuf,ucUartBuf[UART_LENGTH]+3);
+ 209   1        
+ 210   1        UART_SEND_DATA;     //Start Send Data; Set UART REG
+ 211   1      }
+ 212          
+ 213          /*******************************************************************************
+ 214          Function:WriteManufacture() 
+ 215          Description:  write the information: User-defined,  For example, a software reset and forced into sleep
+ 216          Input:  *prt---Data storage address
+ 217          Output: NULL
+ 218          Others:
+ 219          *******************************************************************************/
+ 220          void WriteManufacture(void)
+ 221          { 
+ 222   1        if(ucUartBuf[3+ucUartBuf[UART_LENGTH]] == CRC8cal(&ucUartBuf, ucUartBuf[UART_LENGTH]+3))
+ 223   1        {
+ 224   2          if(ucUartBuf[4] == 0x41)            //0x0041: Reset system
+ 225   2          {
+ 226   3            ucResetFlag = 0x12;
+ 227   3          }
+ 228   2          else if(ucUartBuf[4] == 0x05)         //0x0005: Enter sleep mode
+ 229   2          {
+ 230   3            bPCSleepFlg = 1;
+ 231   3          }
+ 232   2          bUartSndAckFlg = 0;
+ 233   2          UART_SEND_ACK;
+ 234   2        }
+ 235   1        else
+ 236   1        {
+ 237   2          UART_SEND_NACK;
+ 238   2        }
+ 239   1      }
+C51 COMPILER V9.52.0.0   UART                                                              10/24/2019 11:21:00 PAGE 5   
+
+ 240          
+ 241          
+ 242          void ReadSubClassID(void)
+ 243          {
+ 244   1        if(ucUartBuf[3+ucUartBuf[UART_LENGTH]] == CRC8cal(&ucUartBuf, ucUartBuf[UART_LENGTH]+3))
+ 245   1        {
+ 246   2          ucSubClassID=ucUartBuf[3];
+ 247   2          
+ 248   2          bUartSndAckFlg = 0;
+ 249   2          UART_SEND_ACK;
+ 250   2        }
+ 251   1        else
+ 252   1        {
+ 253   2          UART_SEND_NACK;
+ 254   2        }
+ 255   1      }
+ 256          
+ 257          
+ 258          
+ 259          /*******************************************************************************
+ 260          Function:UartRdCmdProcess() 
+ 261          Description:  Processing Uart read command  
+ 262          Input:   NULL
+ 263          Output: NULL
+ 264          Others:
+ 265          *******************************************************************************/
+ 266          void UartRdCmdProcess(void)
+ 267          {
+ 268   1          U8 xdata *rdaddr;
+ 269   1          
+ 270   1          switch(ucUartBuf[UART_CMD_NO])
+ 271   1          {
+ 272   2              case 0xA0:
+ 273   2                  UartHandshake();
+ 274   2              break;
+ 275   2      
+ 276   2              case CELL1:
+ 277   2                  UartReadInfo((U8 xdata *)&Info.uiVCell[ucCellNumOffset]);
+ 278   2              break;
+ 279   2      
+ 280   2              case CELL2:
+ 281   2                  UartReadInfo((U8 xdata *)&Info.uiVCell[ucCellNumOffset+1]);
+ 282   2              break;
+ 283   2      
+ 284   2              case CELL3:
+ 285   2                  UartReadInfo((U8 xdata *)&Info.uiVCell[ucCellNumOffset+2]);
+ 286   2              break;
+ 287   2      
+ 288   2              case CELL4:
+ 289   2                  UartReadInfo((U8 xdata *)&Info.uiVCell[ucCellNumOffset+3]);
+ 290   2              break;
+ 291   2      
+ 292   2              case CELL5:
+ 293   2                  UartReadInfo((U8 xdata *)&Info.uiVCell[ucCellNumOffset+4]);
+ 294   2              break;
+ 295   2      
+ 296   2              case CELL6:
+ 297   2                  UartReadInfo((U8 xdata *)&Info.uiVCell[ucCellNumOffset+5]);
+ 298   2              break;
+ 299   2      
+ 300   2              case CELL7:
+ 301   2                  UartReadInfo((U8 xdata *)&Info.uiVCell[ucCellNumOffset+6]);
+C51 COMPILER V9.52.0.0   UART                                                              10/24/2019 11:21:00 PAGE 6   
+
+ 302   2              break;
+ 303   2      
+ 304   2              case CELL8:
+ 305   2                  UartReadInfo((U8 xdata *)&Info.uiVCell[ucCellNumOffset+7]);
+ 306   2              break;
+ 307   2      
+ 308   2              case CELL9:
+ 309   2                  UartReadInfo((U8 xdata *)&Info.uiVCell[ucCellNumOffset+8]);
+ 310   2              break;
+ 311   2      
+ 312   2              case CELL10:
+ 313   2                  UartReadInfo((U8 xdata *)&Info.uiVCell[ucCellNumOffset+9]);
+ 314   2              break;
+ 315   2          
+ 316   2              case TOTAL_VOLTAGE:
+ 317   2                  UartReadInfo((U8 xdata *)&Info.ulVoltage);
+ 318   2              break;
+ 319   2      
+ 320   2              case CADC_CURRENT:
+ 321   2                  UartReadInfo((U8 xdata *)&Info.slCurr);
+ 322   2              break;
+ 323   2          
+ 324   2              case EXT_TEMP1:
+ 325   2                  UartReadInfo((U8 xdata *)&Info.uiTemp1);
+ 326   2              break;
+ 327   2      
+ 328   2              case EXT_TEMP2:
+ 329   2                  UartReadInfo((U8 xdata *)&Info.uiTemp2);
+ 330   2              break;
+ 331   2      
+ 332   2              case DIE_TEMP1:
+ 333   2                  UartReadInfo((U8 xdata *)&Info.uiICTemp1);
+ 334   2              break;
+ 335   2      
+ 336   2              case DIE_TEMP2:
+ 337   2               UartReadInfo((U8 xdata *)&Info.uiICTemp2);
+ 338   2              break;
+ 339   2      
+ 340   2              case FULL_CHG_CAP:
+ 341   2                  UartReadInfo((U8 xdata *)&Info.ulFCC);
+ 342   2              break;
+ 343   2      
+ 344   2              case REMAIN_CAP:
+ 345   2                  UartReadInfo((U8 xdata *)&Info.ulRC);
+ 346   2              break;
+ 347   2      
+ 348   2              case R_SOC:
+ 349   2                  UartReadInfo((U8 xdata *)&Info.uiRSOC);
+ 350   2              break;
+ 351   2      
+ 352   2              case CYCLE_COUNT:
+ 353   2                  UartReadInfo((U8 xdata *)&Info.uiCycleCount);
+ 354   2              break;
+ 355   2      
+ 356   2              case PACK_STATUS:
+ 357   2                  UartReadInfo((U8 xdata *)&Info.uiPackStatus);
+ 358   2              break;
+ 359   2      
+ 360   2              case BATTERY_STATUS:
+ 361   2                  UartReadInfo((U8 xdata *)&Info.uiBatStatus);
+ 362   2              break;
+ 363   2      
+C51 COMPILER V9.52.0.0   UART                                                              10/24/2019 11:21:00 PAGE 7   
+
+ 364   2              case PACK_CONFIG:
+ 365   2                  UartReadInfo((U8 xdata *)&Info.uiPackConfig);
+ 366   2              break;
+ 367   2      
+ 368   2              case MANUFACTURE_COMMAND:
+ 369   2                  UartReadInfo((U8 xdata *)&Info.uiManuCommand);
+ 370   2              break;
+ 371   2      
+ 372   2              case ISP_COMMAND:
+ 373   2                  ISPHandshake();
+ 374   2              break;
+ 375   2          
+ 376   2              default:    //read extern EEPRom data
+ 377   2                  if(ucUartBuf[UART_LENGTH] >= 128)
+ 378   2                  {
+ 379   3                    bE2PProcessFlg = 1;
+ 380   3                    bE2PRdData = 1;
+ 381   3                  }
+ 382   2            else if(ucUartBuf[UART_CMD_NO] == SUB_PAGE1 && ucSubClassID == RTC_SUBID)
+ 383   2                  {
+ 384   3                    bE2PProcessFlg = 1;
+ 385   3                    bRTCRdTime = 1;
+ 386   3                  }
+ 387   2            else if(ucUartBuf[UART_CMD_NO] == SUB_PAGE1)
+ 388   2                  {
+ 389   3                    rdaddr = (U8 xdata *)Page1WrRdFuncTable[ucSubClassID];
+ 390   3                    UartReadInfo(rdaddr);
+ 391   3                  }
+ 392   2                  else if(ucUartBuf[UART_CMD_NO] == SUB_PAGE2)
+ 393   2                  {
+ 394   3                    rdaddr = (U8 xdata *)Page2WrRdFuncTable[ucSubClassID];
+ 395   3                    UartReadInfo(rdaddr);
+ 396   3                  }
+ 397   2            break;
+ 398   2          }
+ 399   1      }
+ 400          
+ 401          
+ 402          /*******************************************************************************
+ 403          Function:CalibVoltage() 
+ 404          Description:  Prepare calibration voltage, include pack voltage & cell voltage
+ 405          Input:   NULL
+ 406          Output: NULL
+ 407          Others:
+ 408          *******************************************************************************/
+ 409          void CalibVoltage(void)
+ 410          { 
+ 411   1        if(ucUartBuf[3+ucUartBuf[UART_LENGTH]] == CRC8cal(&ucUartBuf, ucUartBuf[UART_LENGTH]+3))
+ 412   1        {
+ 413   2          bCalibrationFlg = 1;
+ 414   2          ulExtVPack = ((U16)ucUartBuf[3]<<8)|ucUartBuf[4];
+ 415   2          ucExtcaliSwitch1 |= 0x01;
+ 416   2      
+ 417   2          UART_SEND_ACK;
+ 418   2        }
+ 419   1        else
+ 420   1        {
+ 421   2          UART_SEND_NACK; 
+ 422   2        }
+ 423   1      }
+ 424          
+ 425          
+C51 COMPILER V9.52.0.0   UART                                                              10/24/2019 11:21:00 PAGE 8   
+
+ 426          /*******************************************************************************
+ 427          Function:CalibCurrent() 
+ 428          Description:  Prepare calibration zero current and discharge current
+ 429          Input:   NULL
+ 430          Output: NULL
+ 431          Others:
+ 432          *******************************************************************************/
+ 433          void CalibCurrent(void)
+ 434          {
+ 435   1        if(ucUartBuf[3+ucUartBuf[UART_LENGTH]] == CRC8cal(&ucUartBuf, ucUartBuf[UART_LENGTH]+3))
+ 436   1        {
+ 437   2          bCalibrationFlg = 1;
+ 438   2          slExtCur = ((U32)ucUartBuf[3]<<24)
+ 439   2                  | ((U32)ucUartBuf[4]<<16)
+ 440   2                  | ((U32)ucUartBuf[5]<<8)
+ 441   2                  | ((U32)ucUartBuf[6]);
+ 442   2          ucExtcaliSwitch1 |= 0x10;
+ 443   2      
+ 444   2          UART_SEND_ACK;
+ 445   2        }
+ 446   1        else
+ 447   1        {
+ 448   2          UART_SEND_NACK;
+ 449   2        }
+ 450   1      }
+ 451          
+ 452          
+ 453          void CalibCurOffset(void)
+ 454          {
+ 455   1        if(ucUartBuf[3+ucUartBuf[UART_LENGTH]] == CRC8cal(&ucUartBuf, ucUartBuf[UART_LENGTH]+3))
+ 456   1        {
+ 457   2          bCalibrationFlg = 1;          //Calibration offset Current
+ 458   2          ucExtcaliSwitch1 |= 0x20;
+ 459   2      
+ 460   2          UART_SEND_ACK;
+ 461   2        }
+ 462   1        else
+ 463   1        {
+ 464   2          UART_SEND_NACK; 
+ 465   2        }
+ 466   1      }
+ 467          
+ 468          
+ 469          /*******************************************************************************
+ 470          Function:CalibTemperature() 
+ 471          Description:  Prepare calibration temperature
+ 472          Input:   NULL
+ 473          Output: NULL
+ 474          Others:
+ 475          *******************************************************************************/
+ 476          void CalibTS1(void)
+ 477          {
+ 478   1        if(ucUartBuf[3+ucUartBuf[UART_LENGTH]] == CRC8cal(&ucUartBuf, ucUartBuf[UART_LENGTH]+3))
+ 479   1        {
+ 480   2          bCalibrationFlg = 1;          //Calibration TS1
+ 481   2          uiExtTemp1 = ((U16)ucUartBuf[3]<<8)|ucUartBuf[4];
+ 482   2          ucExtcaliSwitch1 |= 0x04;
+ 483   2      
+ 484   2          UART_SEND_ACK;
+ 485   2        }
+ 486   1        else
+ 487   1        {
+C51 COMPILER V9.52.0.0   UART                                                              10/24/2019 11:21:00 PAGE 9   
+
+ 488   2          UART_SEND_NACK; 
+ 489   2        }
+ 490   1      }
+ 491          
+ 492          
+ 493          void CalibTS2(void)
+ 494          {
+ 495   1        if(ucUartBuf[3+ucUartBuf[UART_LENGTH]] == CRC8cal(&ucUartBuf, ucUartBuf[UART_LENGTH]+3))
+ 496   1        {
+ 497   2          bCalibrationFlg = 1;          //Calibration TS2
+ 498   2          uiExtTemp2 = ((U16)ucUartBuf[3]<<8)|ucUartBuf[4];
+ 499   2          ucExtcaliSwitch1 |= 0x08;
+ 500   2      
+ 501   2          UART_SEND_ACK;
+ 502   2        }
+ 503   1        else
+ 504   1        {
+ 505   2          UART_SEND_NACK; 
+ 506   2        }
+ 507   1      }
+ 508          
+ 509          
+ 510          /*******************************************************************************
+ 511          Function: CaliRTC(void)
+ 512          Description:  
+ 513          Input:    
+ 514          Output: 
+ 515          Others:
+ 516          *******************************************************************************/
+ 517          void CalibRTC(void)
+ 518          {
+ 519   1        U8 i;
+ 520   1        
+ 521   1        if(ucUartBuf[3+ucUartBuf[UART_LENGTH]] == CRC8cal(&ucUartBuf, ucUartBuf[UART_LENGTH]+3))
+ 522   1        {
+ 523   2          for(i=0; i<6; i++)
+ 524   2          {
+ 525   3            bCalibrationFlg = 1;
+ 526   3            ucExtRTC[i] = ucUartBuf[3+i];
+ 527   3            ucExtcaliSwitch1 |= 0x80;
+ 528   3          }
+ 529   2        }
+ 530   1      }
+ 531          
+ 532          
+ 533          /*******************************************************************************
+ 534          Function:UartWrCmdProcess() 
+ 535          Description:  Processing Uart write command  
+ 536          Input:   NULL
+ 537          Output: NULL
+ 538          Others:
+ 539          *******************************************************************************/
+ 540          void UartWrCmdProcess(void)
+ 541          {
+ 542   1          U8 xdata *rdaddr;
+ 543   1          switch(ucUartBuf[UART_CMD_NO])
+ 544   1          {
+ 545   2              case MANUFACTURE_COMMAND:
+ 546   2                  WriteManufacture();
+ 547   2              break;
+ 548   2              case DATA_FLASH_COMMAND:  
+ 549   2                  ReadSubClassID();               //accept command is dataflashcommand 0x77
+C51 COMPILER V9.52.0.0   UART                                                              10/24/2019 11:21:00 PAGE 10  
+
+ 550   2              break;
+ 551   2              case CALI_CUR_COMMAND:
+ 552   2                  CalibCurrent();
+ 553   2              break;
+ 554   2              case CALI_VOL_COMMAND:
+ 555   2                  CalibVoltage();
+ 556   2              break;
+ 557   2              case CALI_ZERO_CUR_COMMAND:
+ 558   2                  CalibCurOffset();
+ 559   2              break;
+ 560   2              case CALI_TS1_COMMAND:
+ 561   2                  CalibTS1();
+ 562   2              break;
+ 563   2              case CALI_TS2_COMMAND:
+ 564   2                  CalibTS2();
+ 565   2              break;
+ 566   2      
+ 567   2              case CALI_RTC_COMMAND:
+ 568   2                  CalibRTC();
+ 569   2              break;
+ 570   2      //        case ISP_COMMAND:
+ 571   2      //            ISPHandshake();
+ 572   2      //        break;
+ 573   2              case SUB_PAGE1:
+ 574   2                  rdaddr = (U8 xdata *)Page1WrRdFuncTable[ucSubClassID];
+ 575   2                  UartWriteInfo(rdaddr);
+ 576   2              break;
+ 577   2              case SUB_PAGE2:
+ 578   2                  rdaddr = (U8 xdata *)Page2WrRdFuncTable[ucSubClassID];
+ 579   2                  UartWriteInfo(rdaddr);
+ 580   2              break;
+ 581   2              
+ 582   2              case CMD_E2PROM_ERASE:
+ 583   2                  if(ucUartBuf[UART_DATA] == 0x55)    //Testing equipment is properly
+ 584   2                  {
+ 585   3                      bE2PProcessFlg = 1;
+ 586   3                      bE2PErase = 1;
+ 587   3                      UART_SEND_ACK;
+ 588   3                  }
+ 589   2                  else
+ 590   2                  {
+ 591   3                      UART_SEND_NACK;
+ 592   3                  }
+ 593   2              break;
+ 594   2          }
+ 595   1      }
+ 596          
+ 597          
+ 598          
+ 599          /*******************************************************************************
+ 600          Function:  InterruptUART()
+ 601          Description:  Receive and transmit data via UART
+ 602            ucUartBuf[0]--Slave Addr
+ 603            ucUartBuf[1]--CMD No.
+ 604            ucUartBuf[2]--Offset
+ 605            ucUartBuf[3]--Data Length
+ 606            ucUartBuf[4...]--Data
+ 607          Input:    
+ 608          Output: 
+ 609          Others:
+ 610          *******************************************************************************/
+ 611          U8 xdata rx_length = 0;
+C51 COMPILER V9.52.0.0   UART                                                              10/24/2019 11:21:00 PAGE 11  
+
+ 612          U8 xdata tx_length = 0;
+ 613          bit Arry_EN = 0;
+ 614          void InterruptUART(void) interrupt 4
+ 615          {
+ 616   1        if(RI)                              //RT1 interrupt means MCU recept data though UART
+ 617   1        {
+ 618   2          ucUartBuf[ucUartBufPT] = SBUF;                  //transfer SBUF to the ucUartBuf
+ 619   2          ucUartBufPT++;
+ 620   2        //  IO_Error_8 = 1;
+ 621   2          if(ucUartBufPT >= 80)
+ 622   2          {
+ 623   3            ucUartBufPT = 0;
+ 624   3          }
+ 625   2          
+ 626   2      #if 0
+                  if(ucUartBufPT == 1)
+                  {//ÅÐ¶ÏÊÇ²»ÊÇ´Ó»úµØÖ·
+                    if((ucUartBuf[UART_SLAVE_ADDR]&0xFE) == SADDR)      //received first data is not the slave ADDR
+                    {
+                      if((ucUartBuf[UART_SLAVE_ADDR]&0x01)==0)         //bit 7 of UartADDR is R/W 0--R, 1--W
+                      {
+                        bUartReadFlg = 1;         //this communication is read
+                      }
+                      else
+                      {
+                        bUartWriteFlg = 1;          //this communication is write        
+                      }
+                    }
+                    else
+                    {
+                      ucUartBufPT = 0;                       //ucUartBufPT reset to 0  
+                    }
+                  }
+                  if(bUartReadFlg)
+                  {
+                    if(ucUartBufPT == 3 
+                      && ucUartBuf[UART_CMD_NO] != ISP_COMMAND)
+                    {
+                      UartRdCmdProcess();                 //Read the command process      
+                    }
+                    else if (ucUartBuf[UART_CMD_NO] == ISP_COMMAND
+                          && ucUartBufPT > (ucUartBuf[3]+3))
+                    {
+                      ucUartBufPT = 0;
+                              ucUartSndLength = 1;
+                      ISPHandshake();
+                    }
+                  }
+                  
+                  if(bUartWriteFlg)
+                  {
+                    if(ucUartBufPT > (ucUartBuf[UART_LENGTH]+3))        //If a write operation, and complete all the data h
+             -as been received
+                    {
+                      UartWrCmdProcess();         //Write the command peocess
+                      bUartWriteFlg = 0;          //PC write MCU communiaction over
+                      ucUartBufPT = 0;
+                    }
+                  }
+              #else
+ 671   2          
+ 672   2          //ÅÐ¶ÏÊÇµÚËÄ¸öÊý¾Ý£¬ÊÇÊý¾ÝµÄ³¤¶È£¬Ò»Ö¡µÄ³¤¶È¾ÍÊÇÊý¾Ý³¤¶È+6
+C51 COMPILER V9.52.0.0   UART                                                              10/24/2019 11:21:00 PAGE 12  
+
+ 673   2          if(ucUartBufPT == 4)
+ 674   2          {
+ 675   3            rx_length = ucUartBuf[3] + 6;
+ 676   3          } 
+ 677   2          if(ucUartBufPT >= rx_length)//ÕýÈ·»ñÈ¡ÁËÒ»Ö¡Êý¾Ý
+ 678   2          {
+ 679   3            rx_length = 0;
+ 680   3            ucUartBufPT = 0;
+ 681   3      #if 0
+                    if(tomi_rx_handle());
+                  //  memset(ucUartBuf,0,24);
+              #endif
+ 685   3          }
+ 686   2      #endif
+ 687   2          RI = 0;
+ 688   2          bUartSndAckFlg = 0;
+ 689   2        }
+ 690   1        
+ 691   1        if(TI)
+ 692   1        {
+ 693   2      #if debug
+                  while(!TI)//µÈ´ý·¢ËÍÊý¾ÝÍê³É¡£·Ç0£¨ÊÇ1£©¾ÍµÈ´ý
+                  TI = 0;
+              #endif
+ 697   2        }
+ 698   1      #if 0
+                  if((ucUartBufPT==0) || (ucUartBufPT>=ucUartBuf[UART_LENGTH]+3))
+                  {
+                    REN = 1;          //Allow UART receive data
+                    ucUartBufPT = 0;
+                    bUartReadFlg = 0;     //PC read MCU communication over
+                    ucUartBuf[0] = 0;
+                    ucUartBuf[1] = 0;
+                    ucUartBuf[2] = 0;
+                    ucUartBuf[3] = 0;
+                  
+                  }
+                  else
+                  {
+                    ucUartBufPT++;
+                    SBUF = ucUartBuf[ucUartBufPT];
+                  }
+              
+                  if(Arry_EN == 1)//Èç¹û·¢ËÍµÄÊÇ¶ÓÁÐÊý¾Ý
+                  {
+                      //Õâ¸öÊÇ·¢ËÍÒ»¸ö¸öÊý×éµÄÊý¾Ý
+                    if(ucUartBufPT == 4)//´ÓµÚ0¸ö¿ªÊ¼Êý
+                    {
+                      tx_length = ucUartBuf[4] + 7;
+                    }
+                    //¸Õ¿ªÊ¼µÄÊ±ºòÒÑ¾­°Ñ0·¢ËÍ³öÈ¥ÁË£¬·¢ËÍ³öÈ¥ÁËÖ®ºó½øÈëÁËÖÐ¶Ï
+                    if(ucUartBufPT > tx_length)
+                    {
+                      Arry_EN = 0;
+                      tx_length = 0;
+                      TI = 0;
+                      REN = 1;          //Allow UART receive data
+                      ucUartBufPT = 0;
+                      bUartReadFlg = 0;     //PC read MCU communication over
+                      memset(ucUartBuf,0,tx_length);
+                    }
+                    else
+C51 COMPILER V9.52.0.0   UART                                                              10/24/2019 11:21:00 PAGE 13  
+
+                    {   
+                      TI = 0;
+                      ucUartBufPT++;//¿ªÊ¼·¢ËÍÏÂÒ»¸ö
+                      SBUF = ucUartBuf[ucUartBufPT]; 
+                    }
+                  }
+                  else
+                  {
+                    while(!TI);
+                    TI = 0;
+                  }
+                  
+              
+                  
+                  //TI = 0;
+                  bUartSndAckFlg = 1;
+                }
+                  
+                ucIdleTimerCnt = 0;
+                ucPDTimerCnt = 0;     //If communication is clear the count
+                ucUartTimeoutCnt = 0; //200ms»áÇå³ýÒ»ÏÂÖ¸Õë£¬Ò²¾ÍÊÇËµ200msºóÍ³¼ÆÒ»ÏÂÊý¾Ý
+              #endif
+ 757   1      }
+ 758          
+ 759          /***********************by tomi*****************************/
+ 760          U8 auchCRCHi[] =
+ 761          {
+ 762            0x00, 0xC1, 0x81, 0x40, 0x01, 0xC0, 0x80, 0x41, 0x01, 0xC0,
+ 763            0x80, 0x41, 0x00, 0xC1, 0x81, 0x40, 0x01, 0xC0, 0x80, 0x41,
+ 764            0x00, 0xC1, 0x81, 0x40, 0x00, 0xC1, 0x81, 0x40, 0x01, 0xC0,
+ 765            0x80, 0x41, 0x01, 0xC0, 0x80, 0x41, 0x00, 0xC1, 0x81, 0x40,
+ 766            0x00, 0xC1, 0x81, 0x40, 0x01, 0xC0, 0x80, 0x41, 0x00, 0xC1,
+ 767            0x81, 0x40, 0x01, 0xC0, 0x80, 0x41, 0x01, 0xC0, 0x80, 0x41,
+ 768            0x00, 0xC1, 0x81, 0x40, 0x01, 0xC0, 0x80, 0x41, 0x00, 0xC1,
+ 769            0x81, 0x40, 0x00, 0xC1, 0x81, 0x40, 0x01, 0xC0, 0x80, 0x41,
+ 770            0x00, 0xC1, 0x81, 0x40, 0x01, 0xC0, 0x80, 0x41, 0x01, 0xC0,
+ 771            0x80, 0x41, 0x00, 0xC1, 0x81, 0x40, 0x00, 0xC1, 0x81, 0x40,
+ 772            0x01, 0xC0, 0x80, 0x41, 0x01, 0xC0, 0x80, 0x41, 0x00, 0xC1,
+ 773            0x81, 0x40, 0x01, 0xC0, 0x80, 0x41, 0x00, 0xC1, 0x81, 0x40,
+ 774            0x00, 0xC1, 0x81, 0x40, 0x01, 0xC0, 0x80, 0x41, 0x01, 0xC0,
+ 775            0x80, 0x41, 0x00, 0xC1, 0x81, 0x40, 0x00, 0xC1, 0x81, 0x40,
+ 776            0x01, 0xC0, 0x80, 0x41, 0x00, 0xC1, 0x81, 0x40, 0x01, 0xC0,
+ 777            0x80, 0x41, 0x01, 0xC0, 0x80, 0x41, 0x00, 0xC1, 0x81, 0x40,
+ 778            0x00, 0xC1, 0x81, 0x40, 0x01, 0xC0, 0x80, 0x41, 0x01, 0xC0,
+ 779            0x80, 0x41, 0x00, 0xC1, 0x81, 0x40, 0x01, 0xC0, 0x80, 0x41,
+ 780            0x00, 0xC1, 0x81, 0x40, 0x00, 0xC1, 0x81, 0x40, 0x01, 0xC0,
+ 781            0x80, 0x41, 0x00, 0xC1, 0x81, 0x40, 0x01, 0xC0, 0x80, 0x41,
+ 782            0x01, 0xC0, 0x80, 0x41, 0x00, 0xC1, 0x81, 0x40, 0x01, 0xC0,
+ 783            0x80, 0x41, 0x00, 0xC1, 0x81, 0x40, 0x00, 0xC1, 0x81, 0x40,
+ 784            0x01, 0xC0, 0x80, 0x41, 0x01, 0xC0, 0x80, 0x41, 0x00, 0xC1,
+ 785            0x81, 0x40, 0x00, 0xC1, 0x81, 0x40, 0x01, 0xC0, 0x80, 0x41,
+ 786            0x00, 0xC1, 0x81, 0x40, 0x01, 0xC0, 0x80, 0x41, 0x01, 0xC0,
+ 787            0x80, 0x41, 0x00, 0xC1, 0x81, 0x40
+ 788          };
+ 789          
+ 790          
+ 791          U8  auchCRCLo[] =
+ 792          {
+ 793            0x00, 0xC0, 0xC1, 0x01, 0xC3, 0x03, 0x02, 0xC2, 0xC6, 0x06,
+ 794            0x07, 0xC7, 0x05, 0xC5, 0xC4, 0x04, 0xCC, 0x0C, 0x0D, 0xCD,
+ 795            0x0F, 0xCF, 0xCE, 0x0E, 0x0A, 0xCA, 0xCB, 0x0B, 0xC9, 0x09,
+ 796            0x08, 0xC8, 0xD8, 0x18, 0x19, 0xD9, 0x1B, 0xDB, 0xDA, 0x1A,
+C51 COMPILER V9.52.0.0   UART                                                              10/24/2019 11:21:00 PAGE 14  
+
+ 797            0x1E, 0xDE, 0xDF, 0x1F, 0xDD, 0x1D, 0x1C, 0xDC, 0x14, 0xD4,
+ 798            0xD5, 0x15, 0xD7, 0x17, 0x16, 0xD6, 0xD2, 0x12, 0x13, 0xD3,
+ 799            0x11, 0xD1, 0xD0, 0x10, 0xF0, 0x30, 0x31, 0xF1, 0x33, 0xF3,
+ 800            0xF2, 0x32, 0x36, 0xF6, 0xF7, 0x37, 0xF5, 0x35, 0x34, 0xF4,
+ 801            0x3C, 0xFC, 0xFD, 0x3D, 0xFF, 0x3F, 0x3E, 0xFE, 0xFA, 0x3A,
+ 802            0x3B, 0xFB, 0x39, 0xF9, 0xF8, 0x38, 0x28, 0xE8, 0xE9, 0x29,
+ 803            0xEB, 0x2B, 0x2A, 0xEA, 0xEE, 0x2E, 0x2F, 0xEF, 0x2D, 0xED,
+ 804            0xEC, 0x2C, 0xE4, 0x24, 0x25, 0xE5, 0x27, 0xE7, 0xE6, 0x26,
+ 805            0x22, 0xE2, 0xE3, 0x23, 0xE1, 0x21, 0x20, 0xE0, 0xA0, 0x60,
+ 806            0x61, 0xA1, 0x63, 0xA3, 0xA2, 0x62, 0x66, 0xA6, 0xA7, 0x67,
+ 807            0xA5, 0x65, 0x64, 0xA4, 0x6C, 0xAC, 0xAD, 0x6D, 0xAF, 0x6F,
+ 808            0x6E, 0xAE, 0xAA, 0x6A, 0x6B, 0xAB, 0x69, 0xA9, 0xA8, 0x68,
+ 809            0x78, 0xB8, 0xB9, 0x79, 0xBB, 0x7B, 0x7A, 0xBA, 0xBE, 0x7E,
+ 810            0x7F, 0xBF, 0x7D, 0xBD, 0xBC, 0x7C, 0xB4, 0x74, 0x75, 0xB5,
+ 811            0x77, 0xB7, 0xB6, 0x76, 0x72, 0xB2, 0xB3, 0x73, 0xB1, 0x71,
+ 812            0x70, 0xB0, 0x50, 0x90, 0x91, 0x51, 0x93, 0x53, 0x52, 0x92,
+ 813            0x96, 0x56, 0x57, 0x97, 0x55, 0x95, 0x94, 0x54, 0x9C, 0x5C,
+ 814            0x5D, 0x9D, 0x5F, 0x9F, 0x9E, 0x5E, 0x5A, 0x9A, 0x9B, 0x5B,
+ 815            0x99, 0x59, 0x58, 0x98, 0x88, 0x48, 0x49, 0x89, 0x4B, 0x8B,
+ 816            0x8A, 0x4A, 0x4E, 0x8E, 0x8F, 0x4F, 0x8D, 0x4D, 0x4C, 0x8C,
+ 817            0x44, 0x84, 0x85, 0x45, 0x87, 0x47, 0x46, 0x86, 0x82, 0x42,
+ 818            0x43, 0x83, 0x41, 0x81, 0x80, 0x40
+ 819          };
+ 820          U16 CRC16(U8 *puchMsg, U16 usDataLen)
+ 821          {
+ 822   1        U8 uchCRCHi = 0xFF ;  //
+ 823   1        U8 uchCRCLo = 0xFF ;
+ 824   1        U8 uIndex ;
+ 825   1      
+ 826   1        while (usDataLen--)
+ 827   1        {
+ 828   2          uIndex = uchCRCHi ^ *puchMsg++ ;
+ 829   2          uchCRCHi = uchCRCLo ^ auchCRCHi[uIndex] ;
+ 830   2          uchCRCLo = auchCRCLo[uIndex] ;
+ 831   2        }
+ 832   1        return (uchCRCHi << 8 | uchCRCLo) ;
+ 833   1      }
+ 834          
+ 835          
+ 836          typedef struct{
+ 837            U16 addr ;
+ 838            U8 fuc_num ;//¹¦ÄÜÂë
+ 839            U8 *p;
+ 840            U8 fram_len;//Ö¡³¤¶È
+ 841            U8 error_code;//´íÎóÂë
+ 842            U8 data_len;
+ 843            int rx_crc;
+ 844          }rx_from_master;
+ 845          
+ 846          
+ 847          #if 0
+              /*************************************************************************************************
+              * º¯ÊýÃû: tomi_rx_handle
+              * ²Î  Êý: ÎÞ
+              * ·µ»ØÖµ: ÎÞ
+              * ×÷  ÓÃ:½ÓÊÕµ½Ð­Òéºó£¬½øÐÐ»Ø¸´
+              *************************************************************************************************/
+              //0x23¹¦ÄÜÂë
+              //Ìî16Î»µÄSNÂë
+              U8 xdata tx_sn_data[16]= TX_SN;
+              extern pack_fault_flag packfault_flag;
+              bit tomi_rx_handle(void)
+C51 COMPILER V9.52.0.0   UART                                                              10/24/2019 11:21:00 PAGE 15  
+
+              {
+                    rx_from_master xdata receive = {
+                    0,
+                    0,
+                    ucUartBuf,
+                    0,
+                    0,
+                    0,
+                    0,
+                  };
+                  unsigned int RcvCRC = 0;
+                  U8 xdata tx_valid_crc_num = 0;
+                  //U8 xdata tx_buff[24]={0};
+                  U8 xdata tx_error_para = 0x00;
+                /**********txÌîÐ´µÄÖµ***************/
+              
+                  //0x24¹¦ÄÜÂë
+                //  Êý¾ÝÂë01¡¢02ÄÚÈÝÎª:µçÑ¹Öµuint16Êý¾ÝÀàÐÍ£¬µ¥Î»ÎªmV£»
+                  U16 xdata vol_data = Info.ulVoltage;
+                //  Êý¾ÝÂë03¡¢04ÄÚÈÝÎª:µçÁ÷Öµsint16Êý¾ÝÀàÐÍ£¬µ¥Î»ÎªmA£»
+                  S16 xdata cur_data = (S16)Info.slCurr;
+                //  Êý¾ÝÂë05¡¢06ÄÚÈÝÎª:ÎÂ¶ÈÖµsint08Êý¾ÝÀàÐÍ£¬µ¥Î»ÎªÉãÊÏ¶È£»µç³ØÊ£ÓàÈÝÁ¿Öµuint08Êý¾ÝÀàÐÍ£¬°Ù·Ö±È±íÊ¾(%)
+                  S8 xdata tmp = (S8)Info.uiTemp1;
+                  U8 xdata rvol =(U8)Info.uiRSOC;
+                //  Êý¾ÝÂë07¡¢08 ÄÚÈÝÎª:µç³Ø×ÜÈÝÁ¿Öµuint16Êý¾ÝÀàÐÍ£¬µ¥Î»mAh£»
+                  U16 xdata bat_cap = (U16)Info.ulFCC;
+                //  Êý¾ÝÂë09¡¢10 ÄÚÈÝÎª:³äµçµÄ´ÎÊý
+                  U16 xdata chg_num = Info.uiCycleCount;
+                //  Êý¾ÝÂë11¡¢12 ÄÚÈÝÎª:Ê£ÓàÓÃµçÊ±³¤,uint16Êý¾ÝÀàÐÍ£¬µ¥Î»Îªs,½öÔÚµçÁ÷´óÓÚ200mAÊ±¼ÆËã,ÈôµçÁ÷Ð¡ÓÚ200mA,Ôò¸ÃÊ
+             -ý¾ÝÖµºãÎª0xFFFF;
+                  U16 xdata r_time = (U16)Info.ulRC;
+                //  Êý¾ÝÂë13¡¢14 ÄÚÈÝÎª:µçÐ¾³§¼Ò£ºÈýÐÇ  0xA0        LG 0x93£¬×Ö½Ú14ÎªÔ¤Áô£¬Êý¾Ý¶ÔÆë£»
+              
+                  //0x27¹¦ÄÜÂë
+              
+              
+                  U8  xdata manu = 0;
+                  U8  xdata reserve = 0;
+                  receive.addr = ucUartBuf[0]+(ucUartBuf[1] *256);
+                  receive.fuc_num = ucUartBuf[2];
+                  receive.fram_len = rx_length ;
+                  receive.data_len = ucUartBuf[3];
+                  receive.rx_crc = (ucUartBuf[receive.fram_len-2])+((ucUartBuf[receive.fram_len-1])*256);
+                  printf("Rreceive.fram_len =%d \n\r", receive.fram_len);
+                  printf("Rreceive.rx_crc =%x \n\r",receive.rx_crc);
+                  printf("receive.addr =%x \n\r", receive.addr);
+                  if(receive.addr  == 0x4D4D)
+                  {
+                    printf("receive.fuc_num=%x \n\r", receive.fuc_num);
+                    printf("(receive.fram_len-2 ) =%d",(receive.fram_len-2 ));
+                    /*****************CRC16*********************/
+                    RcvCRC = CRC16(ucUartBuf,(receive.fram_len-2 ));
+                    printf("RcvCRC =%x \n\r", (U16)RcvCRC);
+              
+                    if(RcvCRC == receive.rx_crc)
+                    {
+                      printf(" pass crc16 \n\r");
+                      switch(receive.fuc_num)
+                      {
+                        case 0x21://Ö÷»ú¿ØÖÆÖ¸Áî
+                        if((receive.fram_len == 8)&&(receive.data_len == 2))
+                        {
+C51 COMPILER V9.52.0.0   UART                                                              10/24/2019 11:21:00 PAGE 16  
+
+                         receive.p[0] = ucUartBuf[4];
+                         receive.p[1] = ucUartBuf[5];
+                          // run_modeÎª0x01ÇÒmodeÎª0xFF±íÊ¾ÈÃ´Ó»ú´ÓÉý¼¶Ä£Ê½Ìø×ªµ½appÄ£Ê½
+                          // run_modeÎª0x02ÇÒmodeÎª0xFF±íÊ¾ÈÃ´Ó»ú´ÓappÄ£Ê½Ìø×ªµ½Éý¼¶Ä£Ê½
+                          // run_modeÎªÆäËûÖµÊ±,ÎÞÐè´¦Àí¶Ôrun_mode½øÐÐ´¦Àí
+                          if((receive.p[0]== 0x01))//&&(mode ==0xff)
+                          {
+                            //»¹Î´Ìí¼Ó¸Ã¹¦ÄÜ
+                          }
+                          else if((receive.p[0]== 0x02))//&&(mode ==0xff)
+                          {
+              
+                          }
+                          
+                          //³äµçÆ÷µçÑ¹ÅÐ¶Ï
+                          if((receive.p[1]== 0x01))//&&(mode ==0xff)
+                          {
+              
+                          }
+                          else if((receive.p[1]== 0x10))//&&(mode ==0xff)
+                          {
+              
+                          }       
+                              
+                          /****************respond********************/
+                          ucUartBuf[0] = 0x4242 & 0xff;
+                          printf(" ucUartBuf[0]=%x \n\r",ucUartBuf[0]);
+                          ucUartBuf[1] = (0x4242 >> 8)&0xff;
+                          ucUartBuf[2] = 0x21;
+                          ucUartBuf[3] = 0x01;
+                          ucUartBuf[4] = 0;
+                          tx_valid_crc_num = 5 + ucUartBuf[4];
+                          ucUartBuf[5] = CRC16(ucUartBuf,tx_valid_crc_num)&0xff;
+                          printf(" ucUartBuf[5]=%x \n\r",ucUartBuf[5]);
+                          ucUartBuf[6] = (CRC16(ucUartBuf,tx_valid_crc_num) >> 8)&0xff;
+                          printf(" ucUartBuf[6]=%x \n\r",ucUartBuf[6]);
+                          UART_SEND_DATA_ARRY;
+                        }
+                        else
+                        {
+                          return 0;
+                        }
+                        break;
+                         /******************************/
+                        case 0x22://Ö÷»ú²éÑ¯µç³Ø°ü°æ±¾ÐÅÏ¢
+                          printf(" 0x22judge \n\r");
+                          if((receive.fram_len == 6)&&(receive.data_len == 0))
+                            {
+                              /****************respond********************/
+                              ucUartBuf[0] = 0x4242 & 0xff;
+                              ucUartBuf[1] = (0x4242 >> 8)&0xff;
+                              ucUartBuf[2] = 0x22;
+                              ucUartBuf[3] = 0x01;
+                              ucUartBuf[4] = 3;
+                              tx_valid_crc_num = 5 + ucUartBuf[4];
+                              //ÌîÓ²¼þ°æ±¾
+                              ucUartBuf[5] = HWversion;
+                              //ÌîÈí¼þ°æ±¾
+                              ucUartBuf[6] = SWversion;
+                              //ÌîÔËÐÐÄ£Ê½
+                              ucUartBuf[7] = 0x01;//ÔÝÊ±¶¨ÒåÎªappÄ£Ê½£¬ºóÃæÈç¹ûÒªÓÃµ½ÈÎÎñÉý¼¶µÄ»°£¬¾Í¶¨ÒåÒ»¸ö±äÁ¿
+                              ucUartBuf[8] = CRC16(ucUartBuf,tx_valid_crc_num)&0xff;
+C51 COMPILER V9.52.0.0   UART                                                              10/24/2019 11:21:00 PAGE 17  
+
+                              ucUartBuf[9] = (CRC16(ucUartBuf,tx_valid_crc_num) >> 8)&0xff;
+                              UART_SEND_DATA_ARRY;
+                            }
+                            else
+                            {
+                              return 0;
+                            }
+                          break;
+                          /******************************/
+                        case 0x23://Ö÷»ú²éÑ¯µç³Ø°üSNÐÅÏ¢
+                          printf(" 0x23judge \n\r");
+                          if((receive.fram_len == 6)&&(receive.data_len == 0))
+                            {
+                              /****************respond********************/
+                              ucUartBuf[0] = 0x4242 & 0xff;
+                              ucUartBuf[1] = (0x4242 >> 8)&0xff;
+                              ucUartBuf[2] = 0x23;
+                              ucUartBuf[3] = 0x01;
+                              ucUartBuf[4] = 0x0f;
+                              tx_valid_crc_num = 5 + ucUartBuf[4];
+                              //Ìî16Î» SNÂë
+                              memcpy(&ucUartBuf[5],tx_sn_data,16);
+                              ucUartBuf[21] = CRC16(ucUartBuf,tx_valid_crc_num)&0xff;
+                              ucUartBuf[22] = (CRC16(ucUartBuf,tx_valid_crc_num) >> 8)&0xff;
+                              UART_SEND_DATA_ARRY;
+                            }
+                            else
+                            {
+                              return 0;
+                            }
+                          break;
+                          /******************************/
+                        case 0x24://Ö÷»ú²éÑ¯µç³Ø°üÐÅÏ¢1
+                          if((receive.fram_len == 6)&&(receive.data_len == 0))
+                            {
+                              /****************respond********************/
+                              ucUartBuf[0] = 0x4242 & 0xff;
+                              ucUartBuf[1] = (0x4242 >> 8)&0xff;
+                              ucUartBuf[2] = 0x24;
+                              ucUartBuf[3] = 0x01;
+                              ucUartBuf[4] = 0x0d;
+                              tx_valid_crc_num = 5 + ucUartBuf[4];
+                //              Êý¾ÝÂë01¡¢02ÄÚÈÝÎª:µçÑ¹Öµuint16Êý¾ÝÀàÐÍ£¬µ¥Î»ÎªmV£»
+                              ucUartBuf[5] = vol_data&0xff;
+                              ucUartBuf[6] = (vol_data >> 8)&0xff;
+                //              Êý¾ÝÂë03¡¢04ÄÚÈÝÎª:µçÁ÷Öµsint16Êý¾ÝÀàÐÍ£¬µ¥Î»ÎªmA£»
+                              ucUartBuf[7] = vol_data&0xff;//´æ·ÅµÄÊÇµÍ8Î»µÄ×Ö½Ú£¬½âÂëµÄÊ±ºò°´ÕÕsint½âÂë
+                              ucUartBuf[8] = (vol_data >> 8)&0xff;
+                //              Êý¾ÝÂë05¡¢06ÄÚÈÝÎª:ÎÂ¶ÈÖµsint08Êý¾ÝÀàÐÍ£¬µ¥Î»ÎªÉãÊÏ¶È£»µç³ØÊ£ÓàÈÝÁ¿Öµuint08Êý¾ÝÀàÐÍ£¬°Ù
+                //              ·Ö±È±íÊ¾(%)
+                              ucUartBuf[9] = (U8)tmp;//½âÂë°´ÕÕsint08½âÂë
+                              ucUartBuf[10] = rvol;
+                //              Êý¾ÝÂë07¡¢08 ÄÚÈÝÎª:µç³Ø×ÜÈÝÁ¿Öµuint16Êý¾ÝÀàÐÍ£¬µ¥Î»mAh£»
+                              ucUartBuf[11] = bat_cap&0xff;
+                              ucUartBuf[12] = (bat_cap >> 8)&0xff;
+                //              Êý¾ÝÂë09¡¢10 ÄÚÈÝÎª:³äµçµÄ´ÎÊý
+                              ucUartBuf[13] = chg_num&0xff;
+                              ucUartBuf[14] = (chg_num >> 8)&0xff;
+                //              Êý¾ÝÂë11¡¢12 ÄÚÈÝÎª:Ê£ÓàÓÃµçÊ±³¤,uint16Êý¾ÝÀàÐÍ£¬µ¥Î»Îªs,½öÔÚµçÁ÷´óÓÚ200mAÊ±¼ÆËã,ÈôµçÁ÷Ð¡ÓÚ200m
+             -A,Ôò¸ÃÊý¾ÝÖµºãÎª0xFFFF;
+                              if(r_time < 200)
+                              {
+C51 COMPILER V9.52.0.0   UART                                                              10/24/2019 11:21:00 PAGE 18  
+
+                               ucUartBuf[15] = 0xff;
+                               ucUartBuf[16] = 0xff;
+                              }
+                              else
+                              {
+                               ucUartBuf[15] = r_time&0xff;
+                               ucUartBuf[16] = (r_time >> 8)&0xff;
+                              }
+              
+                //              Êý¾ÝÂë13¡¢14 ÄÚÈÝÎª:µçÐ¾³§¼Ò£ºÈýÐÇ  0xA0        LG 0x93£¬×Ö½Ú14ÎªÔ¤Áô£¬Êý¾Ý¶ÔÆë£»
+                              ucUartBuf[17] = manu;
+                              ucUartBuf[18] = 0xff;
+                              //ÌîÔËÐÐÄ£Ê½
+                              ucUartBuf[19] = CRC16(ucUartBuf,tx_valid_crc_num)&0xff;
+                              ucUartBuf[20] = (CRC16(ucUartBuf,tx_valid_crc_num) >> 8)&0xff;
+                              UART_SEND_DATA_ARRY;
+                            }
+                            else
+                            {
+                              return 0;
+                            }
+              
+                          break;
+                        
+                        case 0x25://Ö÷»ú²éÑ¯µç³Ø°üÐÅÏ¢2ÔÝÎ´Ê¹ÓÃ
+                          break;
+                          /******************************/
+                        case 0x26://Ö÷»ú²éÑ¯µç³Ø°ü¹ÊÕÏÐÅÏ¢
+                          if((receive.fram_len == 6)&&(receive.data_len == 0))
+                           {
+                              /****************respond********************/
+                             ucUartBuf[0] = 0x4242 & 0xff;
+                             ucUartBuf[1] = (0x4242 >> 8)&0xff;
+                             ucUartBuf[2] = 0x26;
+                             ucUartBuf[3] = 0x01;
+                             ucUartBuf[4] = 0x02;
+                             tx_valid_crc_num = 5 + ucUartBuf[4];
+                             ucUartBuf[5] = (packfault_flag.pack_flag_all)&0xff;
+                             ucUartBuf[6] = ((packfault_flag.pack_flag_all) >> 8)&0xff;
+                             ucUartBuf[7] = CRC16(ucUartBuf,tx_valid_crc_num)&0xff;
+                             ucUartBuf[8] = (CRC16(ucUartBuf,tx_valid_crc_num) >> 8)&0xff;
+                             UART_SEND_DATA_ARRY;
+                          }
+                          else
+                          {
+                            return 0;
+                          }
+                          break;
+                          /******************************/
+                        case 0x27://Ö÷»ú²éÑ¯µç³Ø°üµ¼ÖÂÊä³ö¹Ø¶ÏµÄÀúÊ·¹ÊÕÏÐÅÏ¢
+                          if((receive.fram_len == 6)&&(receive.data_len == 0))
+                          {
+                            /****************respond********************/
+                             ucUartBuf[0] = 0x4242 & 0xff;
+                             ucUartBuf[1] = (0x4242 >> 8)&0xff;
+                             ucUartBuf[2] = 0x27;
+                             ucUartBuf[3] = 0x01;
+                             ucUartBuf[4] = 0x01;
+                             tx_valid_crc_num = 5 + ucUartBuf[4];
+                             ucUartBuf[5] = (packfault_flag.pack_flag_all)&0xff;//Õâ±ßÀúÊ·´íÎóÂë£¬´ý¶¨
+                             ucUartBuf[6] = CRC16(ucUartBuf,tx_valid_crc_num)&0xff;
+                             ucUartBuf[7] = (CRC16(ucUartBuf,tx_valid_crc_num) >> 8)&0xff;
+C51 COMPILER V9.52.0.0   UART                                                              10/24/2019 11:21:00 PAGE 19  
+
+                             UART_SEND_DATA_ARRY;
+                          }
+                          else
+                          {
+                             return 0;
+                          }
+                          break;
+                        case 0x28://Ö÷»úÇå³ýµç³Ø°üµ¼ÖÂÊä³ö¹Ø¶ÏµÄÀúÊ·¹ÊÕÏÐÅÏ¢
+                          if((receive.fram_len == 6)&&(receive.data_len == 0))
+                          {
+                            /****************respond********************/
+                             ucUartBuf[0] = 0x4242 & 0xff;
+                             ucUartBuf[1] = (0x4242 >> 8)&0xff;
+                             ucUartBuf[2] = 0x28;
+                             ucUartBuf[3] = 0x01;
+                             ucUartBuf[4] = 0x00;
+                             tx_valid_crc_num = 5 + ucUartBuf[4];
+                             ucUartBuf[5] = CRC16(ucUartBuf,tx_valid_crc_num)&0xff;
+                             ucUartBuf[6] = (CRC16(ucUartBuf,tx_valid_crc_num) >> 8)&0xff;
+                             UART_SEND_DATA_ARRY;
+                          }
+                          else
+                          {
+                             return 0;
+                          }
+                          break;
+              
+                        default:
+                          //Ä¬ÈÏ×´Ì¬ÏÂ£º¾ÍÊÇ²»ÊÇÉÏÃæËùÊöµÄÈÎºÎÒ»ÖÖ¹¦ÄÜÂë
+                             ucUartBuf[0] = 0x4242 & 0xff;
+                             ucUartBuf[1] = (0x4242 >> 8)&0xff;
+                             ucUartBuf[2] = 0x28;
+                             ucUartBuf[3] = 0x02;//·µ»ØÎÞÐ§¹¦ÄÜÂë
+                             ucUartBuf[4] = 0x00;
+                             tx_valid_crc_num = 5 + ucUartBuf[4];
+                             ucUartBuf[5] = CRC16(ucUartBuf,tx_valid_crc_num)&0xff;
+                             printf(" ucUartBuf[5]=%x \n\r",ucUartBuf[5]);
+                             ucUartBuf[6] = (CRC16(ucUartBuf,tx_valid_crc_num) >> 8)&0xff;
+                             printf(" ucUartBuf[6]=%x \n\r",ucUartBuf[6]);  
+                             UART_SEND_DATA_ARRY          
+                             break;
+              
+                      }
+                    }
+                    else
+                    {
+                      return 0;
+                    }
+                  }
+                  else
+                  {
+                    return 0;
+                  }
+                  return 1;
+              
+              }
+              
+              #endif
+1163          
+1164          
+1165          
+1166          
+C51 COMPILER V9.52.0.0   UART                                                              10/24/2019 11:21:00 PAGE 20  
+
+1167          
+1168          
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =   1834    ----
+   CONSTANT SIZE    =     82    ----
+   XDATA SIZE       =    514      11
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =      1    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

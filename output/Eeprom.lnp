@@ -1,0 +1,10 @@
+".\output\protect.obj",
+".\output\process.obj",
+".\output\adc.obj",
+".\output\funckey.obj",
+".\output\DataFlash.obj" 
+TO ".\output\Eeprom" 
+PRINT(".\output\Eeprom.m51") RAMSIZE(256) 
+DISABLEWARNING (16) 
+CODE( ?CO?DATAFLASH(0x0000) )
+XDATA( 0X0200-0X04FE )

@@ -1,0 +1,504 @@
+C51 COMPILER V9.52.0.0   PROTECT                                                           10/24/2019 11:21:06 PAGE 1   
+
+
+C51 COMPILER V9.52.0.0, COMPILATION OF MODULE PROTECT
+OBJECT MODULE PLACED IN .\output\protect.obj
+COMPILER INVOKED BY: C:\Program Files (x86)\keil 51\C51\BIN\C51.EXE roidmi\src\protect.c LARGE OPTIMIZE(7,SPEED) BROWSE 
+                    -INCDIR(.\header;.\roidmi\inc) DEBUG OBJECTEXTEND PRINT(.\output\protect.lst) TABS(2) OBJECT(.\output\protect.obj)
+
+line level    source
+
+   1          #include "System.h"
+   2          #include "AfeMtp.h"
+   3          
+   4          //输入电压的最大最小值检测
+   5          #define Input_vol_max 2319    //347   //34.7V对应的AD值2810，
+   6          #define Input_vol_min 2297    //337   //2729测试使用
+   7          #define Input_vol_maxR 2314 //345  //2793
+   8          #define Input_vol_minR 2301 //335 //2712
+   9          
+  10          #define allsistor  1200 //输出总的电阻
+  11          #define partsistor 100  //分压的电阻
+  12          
+  13          
+  14          /*************************************************************************************************
+  15          * 函数名: Input_charger_detect_poron
+  16          * 参  数: 无
+  17          * 返回值: 无
+  18          * 作  用: 检测是否有适配器插入
+  19          *************************************************************************************************/
+  20          void Input_charger_detect_poron(void)
+  21          {
+  22   1          REG.AFESCONF1 |= 0x01;
+  23   1          TWIWriteAFE(AFE_SCONF1, &REG.AFESCONF1);          //enable charger detect 
+  24   1          Delay1ms(100);
+  25   1          TWIReadAFE(AFE_BSTATUS, &REG.AFEBSTATUS);
+  26   1      
+  27   1            if((REG.AFEBSTATUS&0x01) != 0)//充电器连接状态是1，已连接
+  28   1            {
+  29   2              //Delay1ms(2);
+  30   2              if((REG.AFEBSTATUS&0x01) != 0)//充电器连接状态是1，已连接
+  31   2              {
+  32   3                ConectFlg_poron = 1;
+  33   3              }
+  34   2              else
+  35   2              {
+  36   3                ConectFlg_poron = 0;
+  37   3              }
+  38   2            }
+  39   1            else    
+  40   1            {
+  41   2                ConectFlg_poron = 0;
+  42   2            }
+  43   1            REG.AFESCONF1 &= ~0x01;//充电器检测位置0
+  44   1            TWIWriteAFE(AFE_SCONF1, &REG.AFESCONF1);//清除
+  45   1      
+  46   1      #if chargedebug
+                    printf("\n ConectFlg_poron = %bd \n",ConectFlg_poron);    
+              #endif  
+  49   1        
+  50   1      }
+  51          
+  52          
+  53          void Input_charger_detect(void)
+  54          {
+C51 COMPILER V9.52.0.0   PROTECT                                                           10/24/2019 11:21:06 PAGE 2   
+
+  55   1          REG.AFESCONF1 |= 0x01;
+  56   1          TWIWriteAFE(AFE_SCONF1, &REG.AFESCONF1);          //enable charger detect 
+  57   1          if(++charge_detect_cnt >= 2)//这边是延时的作用
+  58   1          {
+  59   2            charge_detect_cnt = 0;
+  60   2            TWIReadAFE(AFE_BSTATUS, &REG.AFEBSTATUS);
+  61   2      
+  62   2            if((REG.AFEBSTATUS&0x01) != 0)//充电器连接状态是1，已连接
+  63   2            {
+  64   3              //Delay1ms(2);
+  65   3              if((REG.AFEBSTATUS&0x01) != 0)//充电器连接状态是1，已连接
+  66   3              {
+  67   4                ConectFlg_poron = 1;
+  68   4              }
+  69   3              else
+  70   3              {
+  71   4                ConectFlg_poron = 0;
+  72   4              }
+  73   3            }
+  74   2            else    
+  75   2            {
+  76   3                ConectFlg_poron = 0;
+  77   3            }
+  78   2            REG.AFESCONF1 &= ~0x01;//充电器检测位置0
+  79   2            TWIWriteAFE(AFE_SCONF1, &REG.AFESCONF1);//清除
+  80   2      
+  81   2      #if chargedebug
+                    printf("\n ConectFlg_poron = %bd \n",ConectFlg_poron);    
+              #endif  
+  84   2        }
+  85   1      }
+  86          
+  87          
+  88          
+  89          
+  90          
+  91          
+  92          /*************************************************************************************************
+  93          * 函数名: Input_vol_judge
+  94          * 参  数: 无
+  95          * 返回值: 无
+  96          * 作  用: 对充电的电压值进行判断
+  97          *************************************************************************************************/
+  98          U8 xdata OIV = 0,UIV = 0 ;//IptEN = 0;
+  99          void Input_vol_judge_poron(void) //单次检测
+ 100          {
+ 101   1        U16 xdata Input_Vol = 0;
+ 102   1      //  if(IO_CHG_MOS == 1)
+ 103   1        {
+ 104   2          Input_Vol = ADCRead(CHG_VOL); //
+ 105   2      #if chargedebug
+                  printf("\n Input_Vol_poron = %d \n",Input_Vol);    
+              #endif  
+ 108   2          if(((Input_Vol)>Input_vol_max))//>34.7V和<33.7V
+ 109   2          {
+ 110   3            OIV = 1;//输入电压过压 
+ 111   3            UIV = 0;
+ 112   3          }
+ 113   2          else if((Input_Vol)< Input_vol_min)
+ 114   2          {
+ 115   3            UIV = 1;
+ 116   3            OIV = 0;
+C51 COMPILER V9.52.0.0   PROTECT                                                           10/24/2019 11:21:06 PAGE 3   
+
+ 117   3          }
+ 118   2          else
+ 119   2          {
+ 120   3            OIV = 0;//允许充电
+ 121   3            UIV = 0;
+ 122   3          }
+ 123   2      
+ 124   2        }
+ 125   1      #if debug
+                  printf("\n por输入适配电压  UIV =%bd OIV= %bd \n",UIV,OIV);    
+              #endif
+ 128   1      }
+ 129          U8 xdata ChkIptOCnt = 0;
+ 130          U8 xdata ChkIptUCnt = 0;
+ 131          U8 xdata ChkIptOCntR = 0;
+ 132          U8 xdata ChkIptUCntR = 0;
+ 133          #define DelayChkIpt 2//40
+ 134          #if 0
+              void Input_vol_judge(void)
+              {
+                U16 xdata Input_Vol = 0;
+              //  if(IO_CHG_MOS == 1)
+                {
+                  Input_Vol = ADCRead(CHG_VOL);
+              #if chargedebug
+                  printf("\n Input_Vol = %d \n",Input_Vol);    
+              #endif  
+                  if(((Input_Vol)>Input_vol_max))//>34.7V和<33.7V
+                  {
+                    if(++ChkIptOCnt > DelayChkIpt)
+                    {
+                      ChkIptOCnt = 0;
+                      OIV = 1;//输入电压过压 
+                    }
+                    ChkIptRCnt = 0;
+                  }
+                  else if((Input_Vol)< Input_vol_min)
+                  {
+                    if(++ChkIptUCnt > DelayChkIpt)
+                    {
+                      ChkIptUCnt = 0;
+                      UIV = 1;
+                    }
+                    ChkIptRCnt = 0;
+                  }
+                  else if(((Input_Vol) > Input_vol_minR)&&((Input_Vol) < Input_vol_maxR))
+                  {
+                    ChkIptUCnt = 0;
+                    ChkIptOCnt = 0;
+                    if(++ChkIptRCnt > DelayChkIpt)
+                    {
+                      ChkIptRCnt = 0;
+                      OIV = 0;//允许充电
+                      UIV = 0;
+                    }
+              
+                  }
+                  else
+                  {
+                    ;//保持
+                  }
+              
+C51 COMPILER V9.52.0.0   PROTECT                                                           10/24/2019 11:21:06 PAGE 4   
+
+                }
+              #if debug
+                  printf("\n 输入适配电压 UIV =%bd OIV= %bd \n",UIV,OIV);    
+              #endif
+              }
+              #else
+ 185          void Input_vol_judge(void)
+ 186          {
+ 187   1        U16 xdata Input_Vol = 0;
+ 188   1      //  if(IO_CHG_MOS == 1)
+ 189   1        
+ 190   1          Input_Vol = ADCRead(CHG_VOL);
+ 191   1      #if chargedebug
+                  printf("\n -----Input_Vol----- = %d \n",Input_Vol);    
+              #endif
+ 194   1        
+ 195   1          if(!OIV)
+ 196   1          {
+ 197   2            if(((Input_Vol) > Input_vol_max))//>34.7V和<33.7V
+ 198   2            {
+ 199   3              if(++ChkIptOCnt >= DelayChkIpt)
+ 200   3              {
+ 201   4                ChkIptOCnt = 0;
+ 202   4                ChkIptOCntR = 0;
+ 203   4                OIV = 1;//输入电压过压 
+ 204   4              }       
+ 205   3            }   
+ 206   2            else if((Input_Vol) < Input_vol_maxR)
+ 207   2            {
+ 208   3              if(ChkIptOCnt > 0)
+ 209   3              {
+ 210   4                ChkIptOCnt--;
+ 211   4              }   
+ 212   3            }
+ 213   2          }
+ 214   1          else
+ 215   1          {
+ 216   2            if(((Input_Vol) < Input_vol_maxR))
+ 217   2            {
+ 218   3              if(++ChkIptOCntR >= DelayChkIpt)
+ 219   3              {
+ 220   4                ChkIptOCnt = 0;
+ 221   4                ChkIptOCntR = 0;
+ 222   4                OIV = 0;//输入电压过压 
+ 223   4              }       
+ 224   3            }   
+ 225   2            else if((Input_Vol) > Input_vol_max)
+ 226   2            {
+ 227   3              if(ChkIptOCntR > 0)
+ 228   3              {
+ 229   4                ChkIptOCntR--;
+ 230   4              }   
+ 231   3            }
+ 232   2          }
+ 233   1          
+ 234   1          
+ 235   1          
+ 236   1          if(!UIV)
+ 237   1          {
+ 238   2            if(((Input_Vol) < Input_vol_min))//>34.7V和<33.7V
+ 239   2            {
+ 240   3              if(++ChkIptUCnt >= DelayChkIpt)
+C51 COMPILER V9.52.0.0   PROTECT                                                           10/24/2019 11:21:06 PAGE 5   
+
+ 241   3              {
+ 242   4                ChkIptUCnt = 0;
+ 243   4                ChkIptUCntR = 0;
+ 244   4                UIV = 1;//输入电压过压 
+ 245   4              }       
+ 246   3            }   
+ 247   2            else if((Input_Vol) > Input_vol_minR)
+ 248   2            {
+ 249   3              if(ChkIptUCnt > 0)
+ 250   3              {
+ 251   4                ChkIptUCnt--;
+ 252   4              }   
+ 253   3            }
+ 254   2          }
+ 255   1          else
+ 256   1          {
+ 257   2      
+ 258   2            if(((Input_Vol) > Input_vol_minR))
+ 259   2            {
+ 260   3              if(++ChkIptUCntR >= DelayChkIpt)
+ 261   3              {
+ 262   4                ChkIptUCnt = 0;
+ 263   4                ChkIptUCntR = 0;
+ 264   4                UIV = 0;//输入电压过压 
+ 265   4              }       
+ 266   3            }   
+ 267   2            else if((Input_Vol) < Input_vol_min)
+ 268   2            {
+ 269   3              if(ChkIptUCntR > 0)
+ 270   3              {
+ 271   4                ChkIptUCntR--;
+ 272   4              }   
+ 273   3            }
+ 274   2          }
+ 275   1        
+ 276   1        
+ 277   1      #if chargedebug
+                  printf("\n 输入适配电压 UIV =%bd OIV= %bd \n",UIV,OIV);    
+              #endif
+ 280   1      }
+ 281          #endif
+ 282          
+ 283          
+ 284          /*************************************************************************************************
+ 285          * 函数名: Chk_Fuse
+ 286          * 参  数: 无
+ 287          * 返回值: 
+ 288          * 作  用: 检测保险丝状态
+ 289          *************************************************************************************************/
+ 290          
+ 291          U8 xdata FOPEN = 0;//默认状态是导通状态
+ 292          #define OffsetpackVol 2000
+ 293          
+ 294          void Chk_Fuse_poron(void)
+ 295          {
+ 296   1        U32 xdata Pack_Vol = 0;
+ 297   1        //U32 xdata Pack_Vol2 = 0;
+ 298   1        //开启输出电压检测
+ 299   1        IO_PACK_VADC = 1;//这边可能里面要加延时
+ 300   1        Delay1ms(10);
+ 301   1        Pack_Vol = (U32)ADCRead(PACK_VOL);
+ 302   1      //  Delay1ms(100);
+C51 COMPILER V9.52.0.0   PROTECT                                                           10/24/2019 11:21:06 PAGE 6   
+
+ 303   1      #if debug
+                  printf("\n AD 值Pack_Vol  = %ld \n",(U32)Pack_Vol);    
+              #endif  
+ 306   1        //换算成电压值
+ 307   1      //  Pack_Vol =  ((Pack_Vol*33*(1000/10)/4096)*(allsistor/partsistor));//转换成mv
+ 308   1          Pack_Vol = (((Pack_Vol*3300)/4096)*(allsistor/partsistor));//转换成mv
+ 309   1      #if debug
+                  printf("\n 转换的Pack_Vol = %ld \n",(U32)Pack_Vol);    
+              #endif  
+ 312   1        //Pack_VoL值不在正常范围内的话
+ 313   1        
+ 314   1        if((Pack_Vol < (Info.ulVoltage-OffsetpackVol))||(Pack_Vol > (Info.ulVoltage+OffsetpackVol)))
+ 315   1        {   
+ 316   2            FOPEN = 1;//fuse状态是断开状态
+ 317   2        }
+ 318   1        else
+ 319   1        {
+ 320   2            FOPEN = 0;
+ 321   2        }
+ 322   1        //关闭检测
+ 323   1        IO_PACK_VADC = 0;//暂时配置0
+ 324   1      #if debug
+                printf("\n por保险丝状态 FOPEN =%bd \n",FOPEN);    
+              #endif
+ 327   1      }
+ 328          
+ 329          U8 xdata ChkFuseCnt = 0;
+ 330          U8 xdata ChkFuseRCnt = 0;
+ 331          #define DelayChkFuse 2//40
+ 332          void Chk_Fuse(void)
+ 333          {
+ 334   1        U32 xdata Pack_Vol = 0;
+ 335   1        //开启输出电压检测
+ 336   1        IO_PACK_VADC = 1;
+ 337   1        Pack_Vol = (U32)ADCRead(PACK_VOL);
+ 338   1        //Pack_VoL值不在正常范围内的话
+ 339   1          Pack_Vol = (((Pack_Vol*3300)/4096)*(allsistor/partsistor));//转换成mv
+ 340   1      #if debug
+                  printf("\n Chk_Fuse:转换的Pack_Vol = %ld \n",(U32)Pack_Vol);    
+              #endif  
+ 343   1        if((Pack_Vol < (Info.ulVoltage-OffsetpackVol))||(Pack_Vol > (Info.ulVoltage+OffsetpackVol)))
+ 344   1        {
+ 345   2      #if debug
+                  printf("\n ----ChkFuseCnt=%bd ---\n",ChkFuseCnt);    
+              #endif
+ 348   2          if(++ChkFuseCnt > DelayChkFuse)
+ 349   2          {
+ 350   3            ChkFuseCnt = 0;
+ 351   3            //关闭检测
+ 352   3            IO_PACK_VADC = 0;
+ 353   3            FOPEN = 1;//fuse状态是断开状态
+ 354   3      #if debug
+                  printf("\n FOPEN is 1 !!!!!!!!!!!!\n");    
+              #endif
+ 357   3          }
+ 358   2          ChkFuseRCnt = 0;
+ 359   2        }
+ 360   1        else
+ 361   1        {
+ 362   2          if(++ChkFuseRCnt > DelayChkFuse)
+ 363   2          {
+ 364   3            ChkFuseRCnt = 0;
+C51 COMPILER V9.52.0.0   PROTECT                                                           10/24/2019 11:21:06 PAGE 7   
+
+ 365   3            FOPEN = 0;
+ 366   3          }
+ 367   2          ChkFuseCnt = 0;
+ 368   2        }
+ 369   1      #if debug
+                  printf("\n 保险丝状态 FOPEN =%bd \n",FOPEN);    
+              #endif
+ 372   1      }
+ 373          
+ 374          
+ 375          /*************************************************************************************************
+ 376          * 函数名: Chk_Cell_VolDIFF
+ 377          * 参  数: uiCellVmax uiCellVmin
+ 378          * 返回值: 
+ 379          * 作  用: 检测单体电压差 Info.uiVCell[i]
+ 380          *************************************************************************************************/
+ 381          U8 xdata Odiff = 0;//默认状态是不超过0.3V的
+ 382          void Chk_Cell_VolDIFF_poron(void)
+ 383          {
+ 384   1        U16 VOL_Diff = 0;
+ 385   1        VOL_Diff = uiCellVmax - uiCellVmin;
+ 386   1      #if debug
+                  printf("\n VOL_Diff_poron =%hd uiCellVmax  = %hd,uiCellVmin = %hd----\n",VOL_Diff,uiCellVmax,uiCellVmin)
+             -;    
+              #endif
+ 389   1        if(VOL_Diff > 300)//大于0.3v
+ 390   1        {
+ 391   2            Odiff = 1; //错误标志
+ 392   2        }
+ 393   1        else
+ 394   1        {
+ 395   2            Odiff = 0;
+ 396   2        }
+ 397   1      #if debug
+                  printf("\n por单体电压差Odiff = %bd \n",Odiff);    
+              #endif  
+ 400   1        
+ 401   1      }
+ 402          
+ 403          
+ 404          
+ 405          
+ 406          U8 xdata ChkDiffCnt = 0;
+ 407          U8 xdata ChkDiffRCnt = 0;
+ 408          #define DelayChkDiff  2  //40
+ 409          void Chk_Cell_VolDIFF(void)
+ 410          {
+ 411   1        U16 VOL_Diff = 0;
+ 412   1        VOL_Diff = uiCellVmax - uiCellVmin;
+ 413   1      #if debug
+                  printf("\n -----VOL_Diff =%hd uiCellVmax  = %hd,uiCellVmin = %hd----\n",VOL_Diff,uiCellVmax,uiCellVmin);
+             -    
+              #endif
+ 416   1        if(VOL_Diff > 300)//大于0.3v
+ 417   1        {
+ 418   2      #if debug
+                  printf("\n ----ChkDiffCnt=%bd ---\n",ChkDiffCnt);    
+              #endif
+ 421   2          if(++ChkDiffCnt > DelayChkDiff)
+ 422   2          {
+ 423   3            ChkDiffCnt = 0;
+ 424   3            Odiff = 1; //错误标志
+C51 COMPILER V9.52.0.0   PROTECT                                                           10/24/2019 11:21:06 PAGE 8   
+
+ 425   3      #if debug
+                  printf("\n Odiff is 1 !!!!!!!!!!!!\n");    
+              #endif
+ 428   3          }
+ 429   2          ChkDiffRCnt = 0;
+ 430   2        }
+ 431   1        else
+ 432   1        {
+ 433   2          if(++ChkDiffRCnt > DelayChkDiff)
+ 434   2          {
+ 435   3            ChkDiffRCnt = 0;
+ 436   3            Odiff = 0;
+ 437   3          }
+ 438   2          ChkDiffCnt = 0;
+ 439   2        }
+ 440   1      #if debug
+                  printf("\n 单体电压差Odiff = %bd \n",Odiff);    
+              #endif  
+ 443   1      }
+ 444          
+ 445          
+ 446          
+ 447          
+ 448          
+ 449          
+ 450          /******************************************20190925地刷电流检测*******************************************
+             -*****/
+ 451          
+ 452          
+ 453          
+ 454          
+ 455          
+ 456          
+ 457          
+ 458          
+ 459          
+ 460          
+ 461          
+ 462          
+ 463          
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    924    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =     12       8
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

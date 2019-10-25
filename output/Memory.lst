@@ -1,0 +1,394 @@
+C51 COMPILER V9.52.0.0   MEMORY                                                            10/24/2019 11:21:01 PAGE 1   
+
+
+C51 COMPILER V9.52.0.0, COMPILATION OF MODULE MEMORY
+OBJECT MODULE PLACED IN .\output\Memory.obj
+COMPILER INVOKED BY: C:\Program Files (x86)\keil 51\C51\BIN\C51.EXE code\Memory.c LARGE OPTIMIZE(7,SPEED) BROWSE INCDIR(
+                    -.\header;.\roidmi\inc) DEBUG OBJECTEXTEND PRINT(.\output\Memory.lst) TABS(2) OBJECT(.\output\Memory.obj)
+
+line level    source
+
+   1          /********************************************************************************
+   2          Copyright (C), Sinowealth Electronic. Ltd.
+   3          Author:   andyliu
+   4          Version:  V0.0
+   5          Date:     2014/05/30
+   6          History:
+   7            V0.0    2014/05/30     Preliminary
+   8          ********************************************************************************/
+   9          #include "system.h"
+  10          
+  11          
+  12          U8 code JumpISP[5]  ={0x5A,0xA5,0x02,0xF4,0x00};        //ISP¹Ø¼ü×Ö¶¨Òå
+  13          
+  14          //*****************************BIT MEMORY START***************************//
+  15          U16 bdata uiPackConfig; 
+  16          sbit bCellNum1    = uiPackConfig^8;
+  17          sbit bCellNum2    = uiPackConfig^9;
+  18          sbit bCellNum3    = uiPackConfig^10;  
+  19          sbit bLEDNum0   = uiPackConfig^11;    //00110111
+  20          sbit bLEDNum1   = uiPackConfig^12;
+  21          sbit bTempNum   = uiPackConfig^13;  //1£ºÖ§³Ö2¸öÎÂ¶Èµã¼ì²â£¬0£º1¸öÎÂ¶Èµã
+  22          sbit bCHGEnd    = uiPackConfig^14; //³äµç½ØÖ¹¹Ø±Õ³äµçmosfet
+  23          sbit bDSGEnd    = uiPackConfig^15; //·Åµç½ØÖ¹¹Ø±Õ·Åµçmos
+  24          
+  25          sbit bSC_EN     = uiPackConfig^0;     //00101011  Ó²¼þ¶ÌÂ·
+  26          sbit bOV_EN     = uiPackConfig^1;      //Ó²¼þ¹ý³ä
+  27          sbit bOCRC_EN   = uiPackConfig^2;     //auto reset or nor when OCC   ¹ýÁ÷×Ô»Ö¸´Ê¹ÄÜ
+  28          sbit bBAL_EN    = uiPackConfig^3;     //Æ½ºâ¹¦ÄÜÊ¹ÄÜ
+  29          sbit bPF_EN     = uiPackConfig^4;     //disable    ¶þ¼¶±£»¤Ê¹ÄÜ
+  30          sbit bCTO_EN    = uiPackConfig^5;     //cell on  ¶ÏÏß¼ì²â
+  31          sbit bOCPM      = uiPackConfig^6;     //disable   ¹ýÁ÷Í¬ÊÂ¹Ø±Õ³ä·Åµçmos
+  32          sbit bEnEEPRomBK  = uiPackConfig^7;   //Ö§³ÖÊý¾Ý±¸·Ý¹¦ÄÜ
+  33          
+  34          U16 bdata uiPackStatus;       
+  35          sbit bCHGMOS    = uiPackStatus^8;      //³äµçmos¿ª¹Ø 1:¿ªÆô               0Î»
+  36          sbit bDSGMOS    = uiPackStatus^9;      //·Åµçmos                          1
+  37          sbit bCHGING    = uiPackStatus^10; //³äµç×´Ì¬                             2 
+  38          sbit bDSGING    = uiPackStatus^11; //·Åµç×´Ì¬                             3
+  39          sbit bSlowDischarge = uiPackStatus^12; //pwmÕ¼¿Õ±ÈµÍ                      4
+  40          sbit bMidDischarge  = uiPackStatus^13; //Õ¼¿Õ±È¸ß                         5
+  41          sbit bFastDischarge =   uiPackStatus^14;//Ò»Ö±¸ßµçÆ½£¬Õ¼¿Õ±È100%          6
+  42          
+  43          sbit bFC          = uiPackStatus^0;      //³äµç½ØÖ¹±êÖ¾Î»                 8
+  44          sbit bFD          = uiPackStatus^1;     //·Åµç½ØÖ¹±êÖ¾Î»                  9
+  45          sbit bVDQ         = uiPackStatus^2;     //Âú³äÈÝÁ¿¸üÐÂÓÐÐ§±êÖ¾Î»          10
+  46          sbit bCAL     = uiPackStatus^7;  //1:ÒÑÐ£×¼ 0£ºÎ´Ð£×¼
+  47          
+  48          U16 bdata uiBatStatus;        
+  49          sbit bHV      = uiBatStatus^8;//¹ý³å±£»¤±êÖ¾Î»                          0
+  50          sbit bUV      = uiBatStatus^9;//¹ý·Å±£»¤±êÖ¾Î»                          1
+  51          sbit bOCC       =   uiBatStatus^10;//³äµç¹ýÁ÷±£»¤±êÖ¾Î» 1·¢Éú¹ý±£»¤
+  52          sbit bOCD       =   uiBatStatus^11;//·Åµç¹ýÁ÷±£»¤±êÖ¾Î»
+  53          //by tomi
+  54          sbit bOCD2      =   uiBatStatus^12;//·Åµç¹ýÁ÷±£»¤±êÖ¾Î»
+C51 COMPILER V9.52.0.0   MEMORY                                                            10/24/2019 11:21:01 PAGE 2   
+
+  55          
+  56          sbit bOTC       = uiBatStatus^0;//³äµç¸ßÎÂ±£»¤                          8
+  57          sbit bOTD       =   uiBatStatus^1;//·Åµç¸ßÎÂ±£»¤
+  58          sbit bUTC     = uiBatStatus^2;//³äµçµÍÎÂ±£»¤
+  59          sbit bUTD     = uiBatStatus^3;//·ÅµçµÍÎÂ±£»¤
+  60          sbit bAFE_OV    = uiBatStatus^4;//Ó²¼þ¹ý³å±£»¤
+  61          sbit bAFE_SC    = uiBatStatus^5;//Ó²¼þ¶ÌÂ·±£»¤
+  62          sbit bCTO     = uiBatStatus^6; //Ô¤ÁôÎ»£¬¶ÏÏß±£»¤
+  63          
+  64          BOOL bTimer1sFlg;
+  65          BOOL bTimer25msFlg;
+  66          BOOL bDataFlashFail;  
+  67          BOOL bWriteFlashFlg;
+  68          BOOL bUpdataFlashFlg;
+  69          BOOL bKeyFlg;
+  70          BOOL bCADCFlg;            //CADC×ªÂëÍê³É±êÖ¾
+  71          BOOL bVADCFlg;
+  72          BOOL bISPFlg;           //ISPÉý¼¶±êÖ¾£¬½øÈëISP³ÌÐò
+  73          BOOL bPCSleepFlg;         //PCÍ¨ÖªÏµÍ³½øÈëSLEEP±êÖ¾
+  74          BOOL bUartSndAckFlg;        //UARTÒÑ¾­·¢ËÍACK¸øÖ÷»ú
+  75          BOOL bCalibrationFlg;       //ÉÏÎ»»ú·¢ËÍÐ£×¼ÃüÁîºóÖÃÎ»¸Ã±êÖ¾
+  76          BOOL bAlarmFlg;           //AFEµÄALARM·¢Éú±êÖ¾
+  77          BOOL bLEDOpen;            //LEDÏÔÊ¾±êÖ¾
+  78          BOOL bLEDChgFlg;
+  79          BOOL bBLEOPEN;
+  80          BOOL bE2RTCON;
+  81          U8 data Timer3cnt;
+  82          
+  83          BOOL bE2PProcessFlg;        //EEPROM´¦Àí±êÖ¾
+  84          BOOL bIdleFlg;            //ÏµÍ³½øÈëIDLE±êÖ¾
+  85          
+  86          BOOL bDsgToChgFlg;          //·Åµç×ª»»Îª³äµç£¬ÐèÒª±¸·ÝÊý¾Ý
+  87          BOOL bChgToDsgFlg;          //³äµç×ª»»Îª·Åµç£¬ÐèÒª±¸·ÝÊý¾Ý
+  88          BOOL bE2PBKDsgEnd;          //·Åµç½áÊø±êÖ¾£¬ÐèÒª±¸·ÝÐÅÏ¢µ½Íâ¹ÒEEPROM
+  89          BOOL bE2PBKDsgEndValid;
+  90          BOOL bE2PBKChgStop;         //³äµç½áÊø±êÖ¾£¬ÐèÒª±¸·ÝÐÅÏ¢µ½Íâ¹ÒEEPROM
+  91          BOOL bE2PBKChgStart;        //³äµç¿ªÊ¼±êÖ¾£¬ÐèÒª±¸·ÝÐÅÏ¢µ½Íâ¹ÒEEPROM
+  92          BOOL bE2PBKRtc;           //RTC¶¨Ê±±¸·Ý±êÖ¾£¬ÐèÒª±¸·ÝÐÅÏ¢µ½Íâ¹ÒEEPROM
+  93          BOOL bE2PErase;           //²Á³ýÍâ¹ÒEEPROM±êÖ¾
+  94          BOOL bE2PRdData;          //¶ÁÈ¡Íâ¹ÒEEPROM±êÖ¾
+  95          BOOL bRTCRdTime;          //¶ÁÈ¡RTCÊ±¼ä±êÖ¾
+  96          
+  97          //*****************************DATA MEMORY START***************************//
+  98          U8 idata STACK[0x100-STACK_ADDR]    _at_  STACK_ADDR;   //¶ÑÕ»
+  99          
+ 100          U8  data  ucCellNum;
+ 101          U16 data  uiCellVmax;
+ 102          U16 data  uiCellVmin;
+ 103          U16 data  uiVoltageMin;
+ 104          U8  xdata ucBalanceTimeCnt;
+ 105          U16 xdata uiBalanceChannel;
+ 106          U8  xdata   AFESCONF2Bk;
+ 107          
+ 108          
+ 109          //Check Load and Charger
+ 110          BOOL bChkLoadFlg;
+ 111          BOOL bChkChgerFlg;
+ 112          BOOL bChkChgerRFlg;
+ 113          BOOL bLoadConectFlg;
+ 114          BOOL bChgerConectFlg;
+ 115          BOOL bUVBkFlg;
+ 116          U8  xdata   ucLoadRCnt;
+C51 COMPILER V9.52.0.0   MEMORY                                                            10/24/2019 11:21:01 PAGE 3   
+
+ 117          U8  xdata   ucChgerRCnt;
+ 118          U8  xdata   ucChgerCnt;
+ 119          U8  xdata   ucLedChgCnt;
+ 120          U8  xdata   ucLedFlickCnt;
+ 121          U8  xdata   ucBLEFlickCnt;
+ 122          
+ 123          //ProtectCnt
+ 124          U8  xdata ucOVcnt     _at_  ProtectCnt;
+ 125          U8  xdata   ucOVRcnt    _at_  ProtectCnt+1;
+ 126          U8  xdata   ucUVcnt     _at_  ProtectCnt+2;
+ 127          U8  xdata   ucUVRcnt    _at_  ProtectCnt+3;
+ 128          U8  xdata   ucChgEndcnt   _at_  ProtectCnt+4;
+ 129          U8  xdata   ucChgEndRcnt  _at_  ProtectCnt+5;
+ 130          U8  xdata   ucDsgEndcnt   _at_  ProtectCnt+6;
+ 131          U8  xdata   ucDsgEndRcnt  _at_  ProtectCnt+7;
+ 132          U8  xdata   ucOTCcnt    _at_  ProtectCnt+8;
+ 133          U8  xdata   ucOTCRcnt   _at_  ProtectCnt+9;
+ 134          U8  xdata   ucUTCcnt    _at_  ProtectCnt+10;
+ 135          U8  xdata   ucUTCRcnt     _at_  ProtectCnt+11;
+ 136          U8  xdata   ucOTDcnt    _at_  ProtectCnt+12;
+ 137          U8  xdata   ucOTDRcnt   _at_  ProtectCnt+13;
+ 138          U8  xdata   ucUTDcnt    _at_  ProtectCnt+14;
+ 139          U8  xdata   ucUTDRcnt   _at_  ProtectCnt+15;
+ 140          
+ 141          //Flash 
+ 142          U8  xdata ucFlashWrValid;
+ 143          U8  xdata ucWriteFlashCnt;
+ 144          
+ 145          //UART
+ 146          BOOL    bUartReadFlg;
+ 147          BOOL    bUartWriteFlg;
+ 148          BOOL    bUartNeedAckFlg;             //UART Need to send ACK flag
+ 149          U8  xdata ucSubClassID;
+ 150          
+ 151          //System low power
+ 152          BOOL    bIdleFlg;
+ 153          BOOL    bPDFlg;
+ 154          BOOL    bWakeupFlg;
+ 155          U8  xdata ucIdleTimerCnt;
+ 156          U8  xdata ucPDTimerCnt;
+ 157          U8  xdata ucResetFlag; 
+ 158          U8  data  ucTimer3Cnt;
+ 159          
+ 160          //Calibrate
+ 161          U16 xdata ulExtVPack;
+ 162          U8  xdata ucExtcaliSwitch1;
+ 163          U8  xdata   ucExtcaliFlag;        //calibration flag
+ 164          S32 xdata slExtCur;
+ 165          U16 xdata uiExtTemp1;
+ 166          U16 xdata uiExtTemp2;
+ 167          
+ 168          //Gauge
+ 169          U16 xdata uiRCCharge;         //Charge capacity statistics
+ 170          U16 xdata uiRCDischarge;        //Discharge capacity statistics
+ 171          U32 xdata ulDsgCycleCount;      //Discharge capacity statistics, for update E2uiCycleCount
+ 172          U32 xdata ulFCCCount;         //The effective discharge capacity statistics, for updating E2ulFCC
+ 173          //BOOL bVDQFlag;
+ 174          
+ 175          
+ 176          //CADC
+ 177          U8  xdata ucOCCcnt;
+ 178          U8  xdata ucOCDcnt;
+C51 COMPILER V9.52.0.0   MEMORY                                                            10/24/2019 11:21:01 PAGE 4   
+
+ 179          //by tomi
+ 180          U8  xdata ucOCD2cnt;
+ 181          
+ 182          U16 xdata uiOCCRcnt;
+ 183          U16 xdata uiOCDRcnt;
+ 184          
+ 185          U8  xdata   ucCadcCnt;
+ 186          S32 xdata   slCadcCurBuf[16];
+ 187          
+ 188          U8  data  ucCellNumOffset;
+ 189          U8  xdata   ucTempeMiddle;
+ 190          
+ 191          //Balance
+ 192          BOOL    bBalanceFlg;
+ 193          BOOL    bBalanceOddFlg;
+ 194          U16 xdata uiBalanceChannel;
+ 195          //U8  xdata ucBalanceCnt;
+ 196          
+ 197          //KEY
+ 198          U8  data  ucKeyValidCnt;
+ 199          U8  data  ucKeyInvalidCnt;
+ 200          U8  data  ucKeyValue;
+ 201          U8  data  ucKeyOldValue;
+ 202          U8  data  ucKeyValueBK;
+ 203          
+ 204          U8  xdata ucLEDTimeCnt;
+ 205          S32 xdata   slCadcCurrent;
+ 206          S32 xdata   slCadcCurAverage;
+ 207          U8  xdata   ucDsgingSpeed;
+ 208          
+ 209          U16 xdata uiTempeMin;
+ 210          U16 xdata uiTempeMax;
+ 211          
+ 212          //Cell tap open 
+ 213          BOOL    bCellOpenDecFlag;//¿ª¶Ï¶ÏÏß¼ì²â±êÖ¾Î»
+ 214          BOOL    bBalancingFlg;
+ 215          U8 idata  ucCellOpenDecCnt;
+ 216          U8 idata  ucBalanceStep;
+ 217          U8 idata  ucCtoCnt;
+ 218          
+ 219          //Charge/Discharge Management
+ 220          SYSINFOR xdata Info;          //System information, For PC display
+ 221          AFEDATA  xdata AFE;           //Used to store AFE ADC Data collection
+ 222          AFEREG   xdata REG;           //Used to set AFE register and read AFE register
+ 223          
+ 224          RTC_VAR xdata RTC;            //For External RTC
+ 225          U16 xdata uiE2PDataAddr;
+ 226          U8  xdata ucRTCBKTime1;
+ 227          U16 xdata uiRTCBKTime2;
+ 228          U8  xdata ucRTCBuf[7];
+ 229          U8  idata ucUpDataLimitTime;
+ 230          U8  xdata ucExtRTC[6];        //During calibration, the received RTC Time
+ 231          
+ 232          U16 xdata uiCHGValidTime;
+ 233          
+ 234          /**************************************************************************************/
+ 235          //DataFlashÖÐÇø¿éµØÖ·¶¨Òå
+ 236          /**************************************************************************************/
+ 237          //ÏµÍ³ÐÅÏ¢Çø¿ªÊ¼ SubClassID=0x00    langth=48
+ 238          U16 xdata E2uiPackConfigMap   _at_  SYS_PARA_MAP_ADDR; 
+ 239          U16 xdata E2uiVOC[10]             _at_  SYS_PARA_MAP_ADDR+2;//µç³Ø°üµçÁ¿10~100%¶ÔÓ¦µÄµçÑ¹Öµmv
+ 240          U32 xdata E2ulDesignCapacity      _at_  SYS_PARA_MAP_ADDR+22;
+C51 COMPILER V9.52.0.0   MEMORY                                                            10/24/2019 11:21:01 PAGE 5   
+
+ 241          U32 xdata E2ulFCC         _at_  SYS_PARA_MAP_ADDR+26; //ÏµÍ³ÂúÈÝÁ¿£¨mAh£©2200
+ 242          U32 xdata E2ulCycleThreshold    _at_  SYS_PARA_MAP_ADDR+30;//ÏµÍ³µ¥´ÊÑ­»··Åµç×ÜÁ¿
+ 243          U16 xdata E2uiCycleCount      _at_  SYS_PARA_MAP_ADDR+34;
+ 244          U16 xdata E2uiLearnLowTemp    _at_  SYS_PARA_MAP_ADDR+36;
+ 245          U16 xdata E2uiNearFCC       _at_  SYS_PARA_MAP_ADDR+38;
+ 246          S16 xdata E2siDfilterCur      _at_  SYS_PARA_MAP_ADDR+40;
+ 247          U8  xdata E2ucDeleyLowPower       _at_  SYS_PARA_MAP_ADDR+42;
+ 248          U8  xdata E2ucChgBKDelay      _at_  SYS_PARA_MAP_ADDR+43;
+ 249          S16 xdata E2uiChgBKCur      _at_  SYS_PARA_MAP_ADDR+44;
+ 250          U8  xdata E2ucRTCBKDelay      _at_  SYS_PARA_MAP_ADDR+46;
+ 251          U8  xdata ucRamCheckFlg1      _at_  SYS_PARA_MAP_ADDR+47;
+ 252          
+ 253          //ÓÃ»§×Ô¶¨Òå²ÎÊýÇø¿ªÊ¼ SubClassID=0x01  langth=50
+ 254          U16 xdata E2uiSWVersion         _at_  SYSINFO_MAP_ADDR;     
+ 255          U16 xdata E2uiHWVersion         _at_  SYSINFO_MAP_ADDR+2;     
+ 256          U8  xdata E2ucID                _at_  SYSINFO_MAP_ADDR+4;       
+ 257          U8  xdata E2ucMNFName[12]       _at_  SYSINFO_MAP_ADDR+5;     
+ 258          U32 xdata E2ulMNFDate       _at_  SYSINFO_MAP_ADDR+17;          
+ 259          U16 xdata E2uiSerialNum       _at_  SYSINFO_MAP_ADDR+21;      
+ 260          U8  xdata E2ucDeviceName[12]    _at_  SYSINFO_MAP_ADDR+23;  
+ 261          U8  xdata E2ucDeviceChem[12]    _at_  SYSINFO_MAP_ADDR+35;    
+ 262          U16 xdata E2uiChemID            _at_  SYSINFO_MAP_ADDR+47;
+ 263          U8  xdata ucRamCheckFlg2      _at_  SYSINFO_MAP_ADDR+49;
+ 264          
+ 265          //³äµç²ÎÊýÇø¿ªÊ¼ SubClassID=0x02    langth=18   
+ 266          U16 xdata   E2uiOVvol       _at_  CHG_PARA_MAP_ADDR;
+ 267          U16 xdata   E2uiOVRvol            _at_  CHG_PARA_MAP_ADDR+2;
+ 268          U8  xdata   E2ucDelayOV           _at_  CHG_PARA_MAP_ADDR+4;
+ 269          U8  xdata   E2ucDelayOVR        _at_  CHG_PARA_MAP_ADDR+5;
+ 270          U16 xdata   E2uiChgEndVol         _at_  CHG_PARA_MAP_ADDR+6;
+ 271          S16 xdata   E2siChgEndCur         _at_  CHG_PARA_MAP_ADDR+8;
+ 272          U8  xdata   E2ucDelayChgEnd       _at_  CHG_PARA_MAP_ADDR+10;
+ 273          S32 xdata   E2slOCCvol        _at_  CHG_PARA_MAP_ADDR+11;
+ 274          U8  xdata   E2ucDelayOCC      _at_  CHG_PARA_MAP_ADDR+15;
+ 275          U8  xdata   E2ucDelayOCCR     _at_  CHG_PARA_MAP_ADDR+16;
+ 276          U8  xdata   ucRamCheckFlg3      _at_  CHG_PARA_MAP_ADDR+17;
+ 277          
+ 278          //·Åµç²ÎÊýÇø¿ªÊ¼ SubClassID=0x03    langth=21
+ 279          U16 xdata   E2uiUVvol             _at_  DSG_PARA_MAP_ADDR;
+ 280          U16 xdata   E2uiUVRvol            _at_  DSG_PARA_MAP_ADDR+2;
+ 281          U8  xdata   E2ucDelayUV           _at_  DSG_PARA_MAP_ADDR+4;            // all the delay unit is 500mS
+ 282          U8  xdata   E2ucDelayUVR          _at_  DSG_PARA_MAP_ADDR+5;
+ 283          U16 xdata   E2uiDsgEndVol         _at_  DSG_PARA_MAP_ADDR+6;//·Åµç½ØÖ¹µçÑ¹
+ 284          U8  xdata   E2ucDelayDsgEnd       _at_  DSG_PARA_MAP_ADDR+8;//·Åµç½ØÖ¹ÑÓÊ±
+ 285          S32 xdata   E2slOCDvol          _at_  DSG_PARA_MAP_ADDR+9;//·Åµç¹ýÁ÷1±£»¤µçÁ÷
+ 286          U8  xdata   E2ucDelayOCD        _at_  DSG_PARA_MAP_ADDR+13;
+ 287          S32 xdata   E2slOCD2vol         _at_  DSG_PARA_MAP_ADDR+14;
+ 288          U8  xdata   E2ucDelayOCD2       _at_  DSG_PARA_MAP_ADDR+18;
+ 289          U8  xdata   E2ucDelayLoadR        _at_  DSG_PARA_MAP_ADDR+19;
+ 290          U8  xdata   ucRamCheckFlg4      _at_  DSG_PARA_MAP_ADDR+20;
+ 291          
+ 292          //·ÅµçPWM²ÎÊýÇø¿ªÊ¼ SubClassID=0x04   langth=5
+ 293          U16 xdata   E2uiDSG1PWMFreq       _at_  DSG_PWM_PARA_MAP_ADDR; 
+ 294          U8  xdata   E2ucDSG1PWMRatioL     _at_  DSG_PWM_PARA_MAP_ADDR+2;      
+ 295          U8  xdata   E2ucDSG1PWMRatioH     _at_  DSG_PWM_PARA_MAP_ADDR+3;    
+ 296          U8  xdata   ucRamCheckFlg5      _at_  DSG_PWM_PARA_MAP_ADDR+4;
+ 297          
+ 298          //³äµçÎÂ¶È±£»¤²ÎÊý¿ªÊ¼ SubClassID=0x05  langth=11
+ 299          U16 xdata   E2uiTempOTC         _at_  CHG_TEMP_PARA_MAP_ADDR;
+ 300          U16 xdata   E2uiTempOTCR          _at_  CHG_TEMP_PARA_MAP_ADDR+2;
+ 301          U16 xdata   E2uiTempUTC             _at_  CHG_TEMP_PARA_MAP_ADDR+4;
+ 302          U16 xdata   E2uiTempUTCR            _at_  CHG_TEMP_PARA_MAP_ADDR+6;
+C51 COMPILER V9.52.0.0   MEMORY                                                            10/24/2019 11:21:01 PAGE 6   
+
+ 303          U8  xdata   E2ucDelayTemp         _at_  CHG_TEMP_PARA_MAP_ADDR+8; //CHG_TEMP_PARA_MAP_ADDR+8; 3
+ 304          U8  xdata   E2ucDelayTempR          _at_  CHG_TEMP_PARA_MAP_ADDR+9;
+ 305          U8  xdata   ucRamCheckFlg6      _at_  CHG_TEMP_PARA_MAP_ADDR+10;
+ 306          
+ 307          //·ÅµçÎÂ¶È±£»¤²ÎÊý¿ªÊ¼ SubClassID=0x06  langth=9
+ 308          U16 xdata   E2uiTempOTD           _at_  DSG_TEMP_PARA_MAP_ADDR;
+ 309          U16 xdata   E2uiTempOTDR          _at_  DSG_TEMP_PARA_MAP_ADDR+2;
+ 310          U16 xdata   E2uiTempUTD           _at_  DSG_TEMP_PARA_MAP_ADDR+4;
+ 311          U16 xdata   E2uiTempUTDR          _at_  DSG_TEMP_PARA_MAP_ADDR+6;
+ 312          U8  xdata   ucRamCheckFlg7      _at_  DSG_TEMP_PARA_MAP_ADDR+8;
+ 313          
+ 314          //Æ½ºâ²ÎÊýÇø¿ªÊ¼ SubClassID=0x08    langth=8
+ 315          U16 xdata E2uiBalanceVol        _at_  BAL_PARA_MAP_ADDR;    
+ 316          U16 xdata E2uiBalanceVolDiff    _at_  BAL_PARA_MAP_ADDR+2;    
+ 317          S16 xdata E2siBalCurrent      _at_  BAL_PARA_MAP_ADDR+4;  
+ 318          U8  xdata E2ucBalanceDelay      _at_  BAL_PARA_MAP_ADDR+6;  
+ 319          U8  xdata ucRamCheckFlg8      _at_  BAL_PARA_MAP_ADDR+7;
+ 320          
+ 321          //AFE²ÎÊýÇø¿ªÊ¼ SubClassID=0x0A     langth=4
+ 322          U8  xdata E2ucAFEProtectConfig  _at_  AFE_PARA_MAP_ADDR;
+ 323          U16 xdata E2uiAFEOVvol      _at_  AFE_PARA_MAP_ADDR+1;
+ 324          U8  xdata ucRamCheckFlg9      _at_  AFE_PARA_MAP_ADDR+3;
+ 325          
+ 326          //Ð£×¼²ÎÊýÇø¿ªÊ¼ SubClassID=0x0B    langth=12
+ 327          U16 xdata   E2uiVPackGain     _at_  CALI_PARA_MAP_ADDR;   
+ 328          S16 xdata   E2siCadcGain      _at_  CALI_PARA_MAP_ADDR+2;
+ 329          S16 xdata   E2siCadcOffset      _at_  CALI_PARA_MAP_ADDR+4;       
+ 330          S16 xdata   E2siTS1Offset     _at_  CALI_PARA_MAP_ADDR+6;
+ 331          S16 xdata   E2siTS2Offset     _at_  CALI_PARA_MAP_ADDR+8;
+ 332          U8  xdata   E2ucCalibrated      _at_  CALI_PARA_MAP_ADDR+10;
+ 333          U8  xdata   ucRamCheckFlg10     _at_  CALI_PARA_MAP_ADDR+11;
+ 334          
+ 335          U8  xdata   Reserved[RESERVED_DATA_LEN]     _at_    RESERVED_DATA_MAP_ADDR;
+ 336          
+ 337          //DataflashCheck
+ 338          U16 xdata   E2uiCheckFlag     _at_    DATAFLASH_MAP_ADDR+510;   
+ 339          
+ 340          
+ 341          U8 xdata  ucUartBuf[150]      _at_ 0x400;     //For UART transmit or acceptance buffer
+ 342          U8 xdata  ucUartBufPT       _at_ 0x400+150;   //Pointing to the current UART Buffer
+ 343          U8 xdata  ucUartSndLength     _at_ 0x400+151;   //UART Buffer send length
+ 344          U8 xdata  ucUartTimeoutCnt    _at_ 0x400+152;   //UART timerout cnt, If not Uart communication within 2s, the
+             -n clear ucUartBufPT
+ 345          
+ 346          
+ 347          
+ 348          
+ 349          //by tomi 
+ 350          U8 xdata  ConectFlg_poron_prev;
+ 351          U8 xdata  LoadConnet_FLG;
+ 352          U8 xdata  ConectFlg_poron;//³äµçÆ÷Á¬½Ó±êÖ¾
+ 353          U8 xdata  charge_detect_cnt;//³äµçÆ÷Á¬½Ó±êÖ
+ 354          U8 xdata  CHGING_cnt;
+ 355          U8 xdata  packfault_cnt;
+ 356          U8 xdata  packfault_i;
+ 357          U8 xdata  fault_cntoiv;
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =   ----    ----
+   CONSTANT SIZE    =      5    ----
+   XDATA SIZE       =    280    ----
+C51 COMPILER V9.52.0.0   MEMORY                                                            10/24/2019 11:21:01 PAGE 7   
+
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =     21    ----
+   IDATA SIZE       =      4    ----
+   BIT SIZE         =     44    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

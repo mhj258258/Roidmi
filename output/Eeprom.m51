@@ -1,0 +1,879 @@
+BL51 BANKED LINKER/LOCATER V6.22                                                        10/21/2019  18:03:41  PAGE 1
+
+
+BL51 BANKED LINKER/LOCATER V6.22, INVOKED BY:
+C:\PROGRAM FILES (X86)\KEIL 51\C51\BIN\BL51.EXE .\output\protect.obj, .\output\process.obj, .\output\adc.obj, .\output\f
+>> unckey.obj, .\output\DataFlash.obj TO .\output\Eeprom PRINT (.\output\Eeprom.m51) RAMSIZE (256) DISABLEWARNING (16) C
+>> ODE (?CO?DATAFLASH (0X0000)) XDATA (0X0200-0X04FE)
+
+
+MEMORY MODEL: LARGE
+
+
+INPUT MODULES INCLUDED:
+  .\output\protect.obj (PROTECT)
+  .\output\process.obj (PROCESS)
+  .\output\adc.obj (ADC)
+  .\output\funckey.obj (FUNCKEY)
+  .\output\DataFlash.obj (DATAFLASH)
+  C:\PROGRAM FILES (X86)\KEIL 51\C51\LIB\C51L.LIB (?C?COPY)
+  C:\PROGRAM FILES (X86)\KEIL 51\C51\LIB\C51L.LIB (?C?IMUL)
+  C:\PROGRAM FILES (X86)\KEIL 51\C51\LIB\C51L.LIB (?C?ILDOPTR)
+  C:\PROGRAM FILES (X86)\KEIL 51\C51\LIB\C51L.LIB (?C?ISTOPTR)
+  C:\PROGRAM FILES (X86)\KEIL 51\C51\LIB\C51L.LIB (?C?LMUL)
+  C:\PROGRAM FILES (X86)\KEIL 51\C51\LIB\C51L.LIB (?C?ULDIV)
+  C:\PROGRAM FILES (X86)\KEIL 51\C51\LIB\C51L.LIB (?C?ULCMP)
+  C:\PROGRAM FILES (X86)\KEIL 51\C51\LIB\C51L.LIB (?C?LSTXDATA)
+  C:\PROGRAM FILES (X86)\KEIL 51\C51\LIB\C51L.LIB (?C?LSTKXDATA)
+  C:\PROGRAM FILES (X86)\KEIL 51\C51\LIB\C51L.LIB (PRINTF)
+  C:\PROGRAM FILES (X86)\KEIL 51\C51\LIB\C51L.LIB (?C?CLDPTR)
+  C:\PROGRAM FILES (X86)\KEIL 51\C51\LIB\C51L.LIB (?C?CLDOPTR)
+  C:\PROGRAM FILES (X86)\KEIL 51\C51\LIB\C51L.LIB (?C?CSTPTR)
+  C:\PROGRAM FILES (X86)\KEIL 51\C51\LIB\C51L.LIB (?C?PLDIXDATA)
+  C:\PROGRAM FILES (X86)\KEIL 51\C51\LIB\C51L.LIB (?C?PSTXDATA)
+  C:\PROGRAM FILES (X86)\KEIL 51\C51\LIB\C51L.LIB (?C?CCASE)
+  C:\PROGRAM FILES (X86)\KEIL 51\C51\LIB\C51L.LIB (PUTCHAR)
+
+
+LINK MAP OF MODULE:  .\output\Eeprom (PROTECT)
+
+
+            TYPE    BASE      LENGTH    RELOCATION   SEGMENT NAME
+            -----------------------------------------------------
+
+            * * * * * * *   D A T A   M E M O R Y   * * * * * * *
+            REG     0000H     0008H     ABSOLUTE     "REG BANK 0"
+            DATA    0008H     0005H     UNIT         ?DT?PRINTF?PRINTF
+                    000DH     0013H                  *** GAP ***
+            BIT     0020H.0   0001H.1   UNIT         ?BI?PRINTF?PRINTF
+
+            * * * * * * *  X D A T A   M E M O R Y  * * * * * * *
+                    0000H     0200H                  *** GAP ***
+            XDATA   0200H     0029H     UNIT         ?XD?_ADCREAD?ADC
+            XDATA   0229H     0028H     UNIT         ?XD?PRINTF?PRINTF
+            XDATA   0251H     000CH     UNIT         ?XD?PROTECT
+            XDATA   025DH     0007H     UNIT         ?XD?_PAIXU?ADC
+            XDATA   0264H     0005H     UNIT         ?XD?FUNCKEY
+            XDATA   0269H     0004H     UNIT         ?XD?CHK_FUSE_PORON?PROTECT
+            XDATA   026DH     0004H     UNIT         ?XD?CHK_FUSE?PROTECT
+            XDATA   0271H     0001H     UNIT         ?XD?PROCESS
+
+            * * * * * * *   C O D E   M E M O R Y   * * * * * * *
+BL51 BANKED LINKER/LOCATER V6.22                                                      10/21/2019  18:03:41  PAGE 2
+
+
+            CODE    0000H     0400H     UNIT         ?CO?DATAFLASH
+            CODE    0400H     0376H     UNIT         ?C?LIB_CODE
+            CODE    0776H     0365H     UNIT         ?PR?PRINTF?PRINTF
+            CODE    0ADBH     0129H     UNIT         ?PR?_PAIXU?ADC
+            CODE    0C04H     00C0H     UNIT         ?PR?CHK_FUSE?PROTECT
+            CODE    0CC4H     009EH     UNIT         ?PR?CHK_FUSE_PORON?PROTECT
+            CODE    0D62H     0080H     UNIT         ?PR?_ADCREAD?ADC
+            CODE    0DE2H     007FH     UNIT         ?PR?INPUT_VOL_JUDGE?PROTECT
+            CODE    0E61H     0048H     UNIT         ?C_INITSEG
+            CODE    0EA9H     0045H     UNIT         ?PR?INPUT_CHARGER_DETECT_PORON?PROTECT
+            CODE    0EEEH     0043H     UNIT         ?PR?CHK_CELL_VOLDIFF?PROTECT
+            CODE    0F31H     0042H     UNIT         ?PR?KEY_PROC?FUNCKEY
+            CODE    0F73H     0040H     UNIT         ?PR?_GETAD_VALUE?ADC
+            CODE    0FB3H     0036H     UNIT         ?PR?MCU_CHK_CDMOS?PROCESS
+            CODE    0FE9H     0033H     UNIT         ?CO?FUNCKEY
+            CODE    101CH     002DH     UNIT         ?PR?INPUT_VOL_JUDGE_PORON?PROTECT
+            CODE    1049H     0028H     UNIT         ?PR?KEY_READ?FUNCKEY
+            CODE    1071H     0027H     UNIT         ?PR?PUTCHAR?PUTCHAR
+            CODE    1098H     0024H     UNIT         ?CO?ADC
+            CODE    10BCH     0021H     UNIT         ?PR?CHK_CELL_VOLDIFF_PORON?PROTECT
+            CODE    10DDH     0010H     UNIT         ?PR?ADC_INIT?ADC
+            CODE    10EDH     000DH     UNIT         ?PR?BUTTON_KEY0_READ?FUNCKEY
+            CODE    10FAH     0008H     UNIT         ?PR?MCU_SHORT_CLEAN?PROCESS
+            CODE    1102H     0006H     UNIT         ?PR?SCAN_KEY?FUNCKEY
+            CODE    1108H     0003H     UNIT         ?PR?MCU_33V_PROCUDE?PROCESS
+
+
+
+OVERLAY MAP OF MODULE:   .\output\Eeprom (PROTECT)
+
+
+SEGMENT
+  +--> CALLED SEGMENT
+---------------------
+
+
+UNRESOLVED EXTERNAL SYMBOLS:
+   INFO
+   REG
+   UICELLVMAX
+   UICELLVMIN
+   _DELAY1MS
+   _TWIREADAFE
+   _TWIWRITEAFE
+
+
+
+SYMBOL TABLE OF MODULE:  .\output\Eeprom (PROTECT)
+
+  VALUE           TYPE          NAME
+  ----------------------------------
+
+  -------         MODULE        PROTECT
+  C:0000H         SYMBOL        _ICE_DUMMY_
+  D:0080H         PUBLIC        P0
+  D:0090H         PUBLIC        P1
+  D:00A0H         PUBLIC        P2
+BL51 BANKED LINKER/LOCATER V6.22                                                      10/21/2019  18:03:41  PAGE 3
+
+
+  D:00B0H         PUBLIC        P3
+  D:00C0H         PUBLIC        P4
+  D:0080H         PUBLIC        P5
+  X:0251H         PUBLIC        ChkDiffRCnt
+  X:0252H         PUBLIC        ConectFlg_poron
+  C:0C04H         PUBLIC        Chk_Fuse
+  B:0080H.3       PUBLIC        P0_3
+  C:0CC4H         PUBLIC        Chk_Fuse_poron
+  X:0253H         PUBLIC        ChkFuseRCnt
+  C:0EEEH         PUBLIC        Chk_Cell_VolDIFF
+  C:0DE2H         PUBLIC        Input_vol_judge
+  X:0254H         PUBLIC        ChkDiffCnt
+  C:10BCH         PUBLIC        Chk_Cell_VolDIFF_poron
+  X:0255H         PUBLIC        ChkIptOCnt
+  X:0256H         PUBLIC        ChkIptRCnt
+  X:0257H         PUBLIC        ChkIptUCnt
+  C:0EA9H         PUBLIC        Input_charger_detect_poron
+  C:101CH         PUBLIC        Input_vol_judge_poron
+  X:0258H         PUBLIC        ChkFuseCnt
+  X:0259H         PUBLIC        Odiff
+  X:025AH         PUBLIC        OIV
+  X:025BH         PUBLIC        UIV
+  X:025CH         PUBLIC        FOPEN
+  -------         PROC          INPUT_CHARGER_DETECT_PORON
+  C:0EA9H         LINE#         20
+  C:0EA9H         LINE#         21
+  C:0EA9H         LINE#         22
+  C:0EB0H         LINE#         23
+  C:0EB9H         LINE#         24
+  C:0EBEH         LINE#         25
+  C:0EC7H         LINE#         26
+  C:0ECEH         LINE#         27
+  C:0ECEH         LINE#         29
+  C:0ED1H         LINE#         30
+  C:0ED1H         LINE#         31
+  C:0ED7H         LINE#         32
+  C:0ED9H         LINE#         39
+  C:0ED9H         LINE#         40
+  C:0EDEH         LINE#         41
+  C:0EDEH         LINE#         42
+  C:0EE5H         LINE#         43
+  -------         ENDPROC       INPUT_CHARGER_DETECT_PORON
+  -------         PROC          INPUT_VOL_JUDGE_PORON
+  -------         DO            
+  D:0006H         SYMBOL        Input_Vol
+  -------         ENDDO         
+  C:101CH         LINE#         61
+  C:101CH         LINE#         62
+  C:101CH         LINE#         63
+  C:101EH         LINE#         66
+  C:1023H         LINE#         70
+  C:102CH         LINE#         71
+  C:102CH         LINE#         72
+  C:102FH         LINE#         73
+  C:1031H         LINE#         74
+  C:103AH         LINE#         75
+  C:103AH         LINE#         76
+BL51 BANKED LINKER/LOCATER V6.22                                                      10/21/2019  18:03:41  PAGE 4
+
+
+  C:1040H         LINE#         77
+  C:1041H         LINE#         79
+  C:1041H         LINE#         80
+  C:1046H         LINE#         81
+  C:1048H         LINE#         82
+  C:1048H         LINE#         84
+  C:1048H         LINE#         88
+  -------         ENDPROC       INPUT_VOL_JUDGE_PORON
+  -------         PROC          INPUT_VOL_JUDGE
+  -------         DO            
+  D:0002H         SYMBOL        Input_Vol
+  -------         ENDDO         
+  C:0DE2H         LINE#         93
+  C:0DE2H         LINE#         94
+  C:0DE2H         LINE#         95
+  C:0DE5H         LINE#         98
+  C:0DEEH         LINE#         102
+  C:0DF7H         LINE#         103
+  C:0DF7H         LINE#         104
+  C:0E02H         LINE#         105
+  C:0E02H         LINE#         106
+  C:0E04H         LINE#         107
+  C:0E09H         LINE#         108
+  C:0E09H         LINE#         109
+  C:0E09H         LINE#         110
+  C:0E0BH         LINE#         111
+  C:0E14H         LINE#         112
+  C:0E14H         LINE#         113
+  C:0E1EH         LINE#         114
+  C:0E1EH         LINE#         115
+  C:0E20H         LINE#         116
+  C:0E25H         LINE#         117
+  C:0E25H         LINE#         118
+  C:0E2AH         LINE#         119
+  C:0E2BH         LINE#         120
+  C:0E47H         LINE#         121
+  C:0E47H         LINE#         122
+  C:0E4CH         LINE#         123
+  C:0E50H         LINE#         124
+  C:0E58H         LINE#         125
+  C:0E58H         LINE#         126
+  C:0E5AH         LINE#         127
+  C:0E5EH         LINE#         128
+  C:0E60H         LINE#         129
+  C:0E60H         LINE#         131
+  C:0E60H         LINE#         133
+  C:0E60H         LINE#         135
+  C:0E60H         LINE#         137
+  C:0E60H         LINE#         141
+  -------         ENDPROC       INPUT_VOL_JUDGE
+  -------         PROC          CHK_FUSE_PORON
+  -------         DO            
+  X:0269H         SYMBOL        Pack_Vol
+  -------         ENDDO         
+  C:0CC4H         LINE#         155
+  C:0CC4H         LINE#         156
+  C:0CC4H         LINE#         157
+BL51 BANKED LINKER/LOCATER V6.22                                                      10/21/2019  18:03:41  PAGE 5
+
+
+  C:0CCEH         LINE#         160
+  C:0CD0H         LINE#         162
+  C:0CDEH         LINE#         169
+  C:0D0EH         LINE#         175
+  C:0D53H         LINE#         176
+  C:0D53H         LINE#         178
+  C:0D55H         LINE#         179
+  C:0D5BH         LINE#         180
+  C:0D5CH         LINE#         182
+  C:0D5CH         LINE#         183
+  C:0D61H         LINE#         184
+  C:0D61H         LINE#         188
+  -------         ENDPROC       CHK_FUSE_PORON
+  -------         PROC          CHK_FUSE
+  -------         DO            
+  X:026DH         SYMBOL        Pack_Vol
+  -------         ENDDO         
+  C:0C04H         LINE#         193
+  C:0C04H         LINE#         194
+  C:0C04H         LINE#         195
+  C:0C0EH         LINE#         197
+  C:0C10H         LINE#         198
+  C:0C1EH         LINE#         200
+  C:0C4EH         LINE#         204
+  C:0C93H         LINE#         205
+  C:0C93H         LINE#         209
+  C:0C9EH         LINE#         210
+  C:0C9EH         LINE#         211
+  C:0CA0H         LINE#         213
+  C:0CA2H         LINE#         214
+  C:0CA7H         LINE#         218
+  C:0CA7H         LINE#         219
+  C:0CACH         LINE#         220
+  C:0CADH         LINE#         222
+  C:0CADH         LINE#         223
+  C:0CB8H         LINE#         224
+  C:0CB8H         LINE#         225
+  C:0CBAH         LINE#         226
+  C:0CBEH         LINE#         227
+  C:0CBEH         LINE#         228
+  C:0CC3H         LINE#         229
+  C:0CC3H         LINE#         233
+  -------         ENDPROC       CHK_FUSE
+  -------         PROC          CHK_CELL_VOLDIFF_PORON
+  -------         DO            
+  D:0006H         SYMBOL        VOL_Diff
+  -------         ENDDO         
+  C:10BCH         LINE#         243
+  C:10BCH         LINE#         244
+  C:10BCH         LINE#         245
+  C:10BCH         LINE#         246
+  C:10C7H         LINE#         250
+  C:10D0H         LINE#         251
+  C:10D0H         LINE#         252
+  C:10D6H         LINE#         253
+  C:10D7H         LINE#         255
+  C:10D7H         LINE#         256
+BL51 BANKED LINKER/LOCATER V6.22                                                      10/21/2019  18:03:41  PAGE 6
+
+
+  C:10DCH         LINE#         257
+  C:10DCH         LINE#         262
+  -------         ENDPROC       CHK_CELL_VOLDIFF_PORON
+  -------         PROC          CHK_CELL_VOLDIFF
+  -------         DO            
+  D:0006H         SYMBOL        VOL_Diff
+  -------         ENDDO         
+  C:0EEEH         LINE#         270
+  C:0EEEH         LINE#         271
+  C:0EEEH         LINE#         272
+  C:0EEEH         LINE#         273
+  C:0EF9H         LINE#         277
+  C:0F02H         LINE#         278
+  C:0F02H         LINE#         282
+  C:0F0DH         LINE#         283
+  C:0F0DH         LINE#         284
+  C:0F0FH         LINE#         285
+  C:0F14H         LINE#         289
+  C:0F14H         LINE#         290
+  C:0F19H         LINE#         291
+  C:0F1AH         LINE#         293
+  C:0F1AH         LINE#         294
+  C:0F25H         LINE#         295
+  C:0F25H         LINE#         296
+  C:0F27H         LINE#         297
+  C:0F2BH         LINE#         298
+  C:0F2BH         LINE#         299
+  C:0F30H         LINE#         300
+  C:0F30H         LINE#         306
+  -------         ENDPROC       CHK_CELL_VOLDIFF
+  -------         ENDMOD        PROTECT
+
+  -------         MODULE        PROCESS
+  C:0000H         SYMBOL        _ICE_DUMMY_
+  D:0080H         PUBLIC        P0
+  D:0090H         PUBLIC        P1
+  D:00A0H         PUBLIC        P2
+  D:00B0H         PUBLIC        P3
+  D:00C0H         PUBLIC        P4
+  D:0080H         PUBLIC        P5
+  X:0271H         PUBLIC        Short_flag
+  B:0080H.0       PUBLIC        P0_0
+  B:0080H.4       PUBLIC        P0_4
+  B:00B0H.2       PUBLIC        P3_2
+  B:0080H.6       PUBLIC        P0_6
+  C:10FAH         PUBLIC        MCU_Short_Clean
+  C:1108H         PUBLIC        MCU_33V_Procude
+  C:0FB3H         PUBLIC        MCU_CHK_CDmos
+  -------         PROC          MCU_33V_PROCUDE
+  C:1108H         LINE#         14
+  C:1108H         LINE#         15
+  C:1108H         LINE#         16
+  C:110AH         LINE#         17
+  -------         ENDPROC       MCU_33V_PROCUDE
+  -------         PROC          MCU_SHORT_CLEAN
+  C:10FAH         LINE#         26
+  C:10FAH         LINE#         27
+BL51 BANKED LINKER/LOCATER V6.22                                                      10/21/2019  18:03:41  PAGE 7
+
+
+  C:10FAH         LINE#         28
+  C:10FCH         LINE#         29
+  C:1101H         LINE#         30
+  -------         ENDPROC       MCU_SHORT_CLEAN
+  -------         PROC          MCU_CHK_CDMOS
+  -------         DO            
+  D:0007H         SYMBOL        ALLOW_CHG_FLAG
+  D:0006H         SYMBOL        ALLOW_DSG_FLAG
+  -------         ENDDO         
+  C:0FB3H         LINE#         40
+  C:0FB3H         LINE#         41
+  C:0FB3H         LINE#         42
+  C:0FB3H         LINE#         43
+  C:0FB3H         LINE#         49
+  C:0FCBH         LINE#         50
+  C:0FCBH         LINE#         51
+  C:0FCDH         LINE#         52
+  C:0FCDH         LINE#         53
+  C:0FCFH         LINE#         55
+  C:0FCFH         LINE#         56
+  C:0FD1H         LINE#         57
+  C:0FD1H         LINE#         58
+  C:0FD1H         LINE#         61
+  C:0FE3H         LINE#         62
+  C:0FE3H         LINE#         66
+  C:0FE5H         LINE#         67
+  C:0FE5H         LINE#         68
+  C:0FE6H         LINE#         70
+  C:0FE6H         LINE#         71
+  C:0FE8H         LINE#         72
+  C:0FE8H         LINE#         73
+  C:0FE8H         LINE#         82
+  -------         ENDPROC       MCU_CHK_CDMOS
+  -------         ENDMOD        PROCESS
+
+  -------         MODULE        ADC
+  C:0000H         SYMBOL        _ICE_DUMMY_
+  D:0080H         PUBLIC        P0
+  D:0090H         PUBLIC        P1
+  D:00A0H         PUBLIC        P2
+  D:00B0H         PUBLIC        P3
+  D:00C0H         PUBLIC        P4
+  D:0080H         PUBLIC        P5
+  C:0F73H         PUBLIC        _GetAD_Value
+  D:0097H         PUBLIC        ADDxH
+  D:0096H         PUBLIC        ADDxL
+  D:0093H         PUBLIC        ADCON1
+  D:0092H         PUBLIC        ADCON2
+  C:0ADBH         SYMBOL        _paixu
+  D:0095H         PUBLIC        ADCH1
+  C:1098H         SYMBOL        _?ix1000
+  D:00A6H         PUBLIC        ADCH2
+  C:0D62H         PUBLIC        _ADCRead
+  D:0091H         PUBLIC        SEQCON
+  D:0094H         PUBLIC        ADT
+  C:10DDH         PUBLIC        ADC_init
+  D:009FH         PUBLIC        SEQCHx
+BL51 BANKED LINKER/LOCATER V6.22                                                      10/21/2019  18:03:41  PAGE 8
+
+
+  -------         PROC          ADC_INIT
+  C:10DDH         LINE#         11
+  C:10DDH         LINE#         12
+  C:10DDH         LINE#         18
+  C:10E0H         LINE#         23
+  C:10E3H         LINE#         27
+  C:10E6H         LINE#         35
+  C:10E9H         LINE#         36
+  C:10ECH         LINE#         41
+  -------         ENDPROC       ADC_INIT
+  -------         PROC          _GETAD_VALUE
+  D:0007H         SYMBOL        ucAdcChannal
+  -------         DO            
+  D:0004H         SYMBOL        uiConvertValue
+  -------         ENDDO         
+  C:0F73H         LINE#         77
+  C:0F73H         LINE#         78
+  C:0F73H         LINE#         79
+  C:0F76H         LINE#         81
+  C:0F79H         LINE#         82
+  C:0F7CH         LINE#         83
+  C:0F7FH         LINE#         84
+  C:0F84H         LINE#         89
+  C:0F87H         LINE#         90
+  C:0F88H         LINE#         91
+  C:0F89H         LINE#         92
+  C:0F8CH         LINE#         93
+  C:0F8FH         LINE#         94
+  C:0F92H         LINE#         95
+  C:0F93H         LINE#         96
+  C:0F94H         LINE#         97
+  C:0F95H         LINE#         98
+  C:0F98H         LINE#         99
+  C:0FA0H         LINE#         100
+  C:0FA3H         LINE#         101
+  C:0FA8H         LINE#         102
+  C:0FAFH         LINE#         104
+  C:0FB2H         LINE#         105
+  -------         ENDPROC       _GETAD_VALUE
+  -------         PROC          _PAIXU
+  D:0001H         SYMBOL        arr
+  X:025DH         SYMBOL        len
+  -------         DO            
+  X:025EH         SYMBOL        i
+  X:0260H         SYMBOL        j
+  X:0262H         SYMBOL        t
+  -------         ENDDO         
+  C:0ADBH         LINE#         116
+  C:0AE0H         LINE#         117
+  C:0AE0H         LINE#         119
+  C:0B06H         LINE#         120
+  C:0B3AH         LINE#         121
+  C:0B3AH         LINE#         122
+  C:0B6BH         LINE#         123
+  C:0B6BH         LINE#         124
+  C:0BDBH         LINE#         125
+  C:0BDBH         LINE#         126
+BL51 BANKED LINKER/LOCATER V6.22                                                      10/21/2019  18:03:41  PAGE 9
+
+
+  C:0C03H         LINE#         127
+  -------         ENDPROC       _PAIXU
+  -------         PROC          _ADCREAD
+  X:0200H         SYMBOL        ucAdcChannal
+  -------         DO            
+  X:0201H         SYMBOL        sum
+  X:0203H         SYMBOL        ad_temp
+  X:0205H         SYMBOL        ad_val
+  D:0003H         SYMBOL        i
+  D:0006H         SYMBOL        adc_data
+  -------         ENDDO         
+  C:0D62H         LINE#         139
+  C:0D67H         LINE#         140
+  C:0D67H         LINE#         142
+  C:0D70H         LINE#         143
+  C:0D82H         LINE#         147
+  C:0D84H         LINE#         148
+  C:0D84H         LINE#         149
+  C:0D9DH         LINE#         157
+  C:0DA2H         LINE#         159
+  C:0DADH         LINE#         160
+  C:0DADH         LINE#         161
+  C:0DADH         LINE#         162
+  C:0DCAH         LINE#         163
+  C:0DCFH         LINE#         164
+  C:0DE1H         LINE#         166
+  C:0DE1H         LINE#         167
+  -------         ENDPROC       _ADCREAD
+  -------         ENDMOD        ADC
+
+  -------         MODULE        FUNCKEY
+  C:0000H         SYMBOL        _ICE_DUMMY_
+  D:0080H         PUBLIC        P0
+  D:0090H         PUBLIC        P1
+  D:00A0H         PUBLIC        P2
+  D:00B0H         PUBLIC        P3
+  D:00C0H         PUBLIC        P4
+  D:0080H         PUBLIC        P5
+  C:1049H         SYMBOL        Key_Read
+  B:00A0H.3       PUBLIC        P2_3
+  X:0264H         PUBLIC        Cont
+  B:00A0H.7       PUBLIC        P2_7
+  C:0F31H         SYMBOL        Key_Proc
+  X:0265H         PUBLIC        Trg
+  X:0266H         PUBLIC        Once_key_flag
+  C:1102H         PUBLIC        Scan_key
+  X:0267H         PUBLIC        cnt_shake
+  X:0268H         PUBLIC        KEY_State
+  C:10EDH         SYMBOL        button_key0_read
+  -------         PROC          BUTTON_KEY0_READ
+  C:10EDH         LINE#         13
+  C:10EDH         LINE#         14
+  C:10EDH         LINE#         15
+  C:10F0H         LINE#         16
+  C:10F0H         LINE#         17
+  C:10F2H         LINE#         18
+  C:10F5H         LINE#         19
+BL51 BANKED LINKER/LOCATER V6.22                                                      10/21/2019  18:03:41  PAGE 10
+
+
+  C:10F5H         LINE#         21
+  C:10F5H         LINE#         22
+  C:10F7H         LINE#         23
+  C:10F9H         LINE#         24
+  C:10F9H         LINE#         26
+  -------         ENDPROC       BUTTON_KEY0_READ
+  -------         PROC          KEY_READ
+  -------         DO            
+  D:0007H         SYMBOL        ReadData
+  -------         ENDDO         
+  C:1049H         LINE#         36
+  C:1049H         LINE#         37
+  C:1049H         LINE#         39
+  C:104FH         LINE#         40
+  C:1058H         LINE#         41
+  C:105EH         LINE#         43
+  -------         ENDPROC       KEY_READ
+  -------         PROC          KEY_PROC
+  C:0F31H         LINE#         62
+  C:0F31H         LINE#         63
+  C:0F31H         LINE#         67
+  C:0F31H         LINE#         69
+  C:0F38H         LINE#         70
+  C:0F38H         LINE#         75
+  C:0F38H         LINE#         76
+  C:0F38H         LINE#         77
+  C:0F38H         LINE#         82
+  C:0F38H         LINE#         83
+  C:0F38H         LINE#         88
+  C:0F38H         LINE#         89
+  C:0F38H         LINE#         94
+  C:0F38H         LINE#         95
+  C:0F38H         LINE#         100
+  C:0F38H         LINE#         101
+  C:0F38H         LINE#         106
+  C:0F38H         LINE#         108
+  C:0F38H         LINE#         109
+  C:0F43H         LINE#         110
+  C:0F43H         LINE#         111
+  C:0F45H         LINE#         112
+  C:0F45H         LINE#         113
+  C:0F45H         LINE#         114
+  C:0F45H         LINE#         126
+  C:0F59H         LINE#         127
+  C:0F59H         LINE#         128
+  C:0F5FH         LINE#         129
+  C:0F61H         LINE#         131
+  C:0F61H         LINE#         132
+  C:0F66H         LINE#         133
+  C:0F66H         LINE#         135
+  C:0F6FH         LINE#         136
+  C:0F6FH         LINE#         141
+  C:0F72H         LINE#         143
+  C:0F72H         LINE#         146
+  -------         ENDPROC       KEY_PROC
+  -------         PROC          SCAN_KEY
+  C:1102H         LINE#         153
+BL51 BANKED LINKER/LOCATER V6.22                                                      10/21/2019  18:03:41  PAGE 11
+
+
+  C:1102H         LINE#         154
+  C:1102H         LINE#         155
+  C:1105H         LINE#         156
+  -------         ENDPROC       SCAN_KEY
+  -------         ENDMOD        FUNCKEY
+
+  -------         MODULE        DATAFLASH
+  C:0000H         SYMBOL        _ICE_DUMMY_
+  C:0000H         PUBLIC        dataflash
+  -------         ENDMOD        DATAFLASH
+
+  -------         MODULE        ?C?COPY
+  C:04D0H         PUBLIC        ?C?COPY
+  -------         ENDMOD        ?C?COPY
+
+  -------         MODULE        ?C?IMUL
+  C:04F6H         PUBLIC        ?C?IMUL
+  -------         ENDMOD        ?C?IMUL
+
+  -------         MODULE        ?C?ILDOPTR
+  C:0508H         PUBLIC        ?C?ILDOPTR
+  -------         ENDMOD        ?C?ILDOPTR
+
+  -------         MODULE        ?C?ISTOPTR
+  C:0540H         PUBLIC        ?C?ISTOPTR
+  -------         ENDMOD        ?C?ISTOPTR
+
+  -------         MODULE        ?C?LMUL
+  C:056DH         PUBLIC        ?C?LMUL
+  -------         ENDMOD        ?C?LMUL
+
+  -------         MODULE        ?C?ULDIV
+  C:05F8H         PUBLIC        ?C?ULDIV
+  -------         ENDMOD        ?C?ULDIV
+
+  -------         MODULE        ?C?ULCMP
+  C:068AH         PUBLIC        ?C?ULCMP
+  -------         ENDMOD        ?C?ULCMP
+
+  -------         MODULE        ?C?LSTXDATA
+  C:069BH         PUBLIC        ?C?LSTXDATA
+  -------         ENDMOD        ?C?LSTXDATA
+
+  -------         MODULE        ?C?LSTKXDATA
+  C:06A7H         PUBLIC        ?C?LSTKXDATA
+  -------         ENDMOD        ?C?LSTKXDATA
+
+  -------         MODULE        PRINTF
+  X:0229H         PUBLIC        ?_PRINTF517?BYTE
+  X:0229H         PUBLIC        ?_PRINTF?BYTE
+  X:0229H         PUBLIC        ?_SPRINTF517?BYTE
+  X:0229H         PUBLIC        ?_SPRINTF?BYTE
+  C:07E1H         PUBLIC        _PRINTF
+  C:07E1H         PUBLIC        _PRINTF517
+  C:07DBH         PUBLIC        _SPRINTF
+  C:07DBH         PUBLIC        _SPRINTF517
+  -------         ENDMOD        PRINTF
+BL51 BANKED LINKER/LOCATER V6.22                                                      10/21/2019  18:03:41  PAGE 12
+
+
+
+  -------         MODULE        ?C?CLDPTR
+  C:06D8H         PUBLIC        ?C?CLDPTR
+  -------         ENDMOD        ?C?CLDPTR
+
+  -------         MODULE        ?C?CLDOPTR
+  C:06F1H         PUBLIC        ?C?CLDOPTR
+  -------         ENDMOD        ?C?CLDOPTR
+
+  -------         MODULE        ?C?CSTPTR
+  C:071EH         PUBLIC        ?C?CSTPTR
+  -------         ENDMOD        ?C?CSTPTR
+
+  -------         MODULE        ?C?PLDIXDATA
+  C:0730H         PUBLIC        ?C?PLDIXDATA
+  -------         ENDMOD        ?C?PLDIXDATA
+
+  -------         MODULE        ?C?PSTXDATA
+  C:0747H         PUBLIC        ?C?PSTXDATA
+  -------         ENDMOD        ?C?PSTXDATA
+
+  -------         MODULE        ?C?CCASE
+  C:0750H         PUBLIC        ?C?CCASE
+  -------         ENDMOD        ?C?CCASE
+
+  -------         MODULE        PUTCHAR
+  C:1071H         PUBLIC        _PUTCHAR
+  -------         ENDMOD        PUTCHAR
+
+*** WARNING L10: CANNOT DETERMINE ROOT SEGMENT
+
+*** WARNING L1: UNRESOLVED EXTERNAL SYMBOL
+    SYMBOL:  UICELLVMIN
+    MODULE:  .\output\protect.obj (PROTECT)
+
+*** WARNING L1: UNRESOLVED EXTERNAL SYMBOL
+    SYMBOL:  UICELLVMAX
+    MODULE:  .\output\protect.obj (PROTECT)
+
+*** WARNING L1: UNRESOLVED EXTERNAL SYMBOL
+    SYMBOL:  _DELAY1MS
+    MODULE:  .\output\protect.obj (PROTECT)
+
+*** WARNING L1: UNRESOLVED EXTERNAL SYMBOL
+    SYMBOL:  INFO
+    MODULE:  .\output\protect.obj (PROTECT)
+
+*** WARNING L1: UNRESOLVED EXTERNAL SYMBOL
+    SYMBOL:  _TWIREADAFE
+    MODULE:  .\output\protect.obj (PROTECT)
+
+*** WARNING L1: UNRESOLVED EXTERNAL SYMBOL
+    SYMBOL:  _TWIWRITEAFE
+    MODULE:  .\output\protect.obj (PROTECT)
+
+*** WARNING L1: UNRESOLVED EXTERNAL SYMBOL
+    SYMBOL:  REG
+BL51 BANKED LINKER/LOCATER V6.22                                                      10/21/2019  18:03:41  PAGE 13
+
+
+    MODULE:  .\output\protect.obj (PROTECT)
+
+*** WARNING L2: REFERENCE MADE TO UNRESOLVED EXTERNAL
+    SYMBOL:  REG
+    MODULE:  .\output\protect.obj (PROTECT)
+    ADDRESS: 0EAAH
+
+*** WARNING L2: REFERENCE MADE TO UNRESOLVED EXTERNAL
+    SYMBOL:  REG
+    MODULE:  .\output\protect.obj (PROTECT)
+    ADDRESS: 0EB1H
+
+*** WARNING L2: REFERENCE MADE TO UNRESOLVED EXTERNAL
+    SYMBOL:  REG
+    MODULE:  .\output\protect.obj (PROTECT)
+    ADDRESS: 0EB3H
+
+*** WARNING L2: REFERENCE MADE TO UNRESOLVED EXTERNAL
+    SYMBOL:  _TWIWRITEAFE
+    MODULE:  .\output\protect.obj (PROTECT)
+    ADDRESS: 0EB7H
+
+*** WARNING L2: REFERENCE MADE TO UNRESOLVED EXTERNAL
+    SYMBOL:  _DELAY1MS
+    MODULE:  .\output\protect.obj (PROTECT)
+    ADDRESS: 0EBCH
+
+*** WARNING L2: REFERENCE MADE TO UNRESOLVED EXTERNAL
+    SYMBOL:  REG
+    MODULE:  .\output\protect.obj (PROTECT)
+    ADDRESS: 0EBFH
+
+*** WARNING L2: REFERENCE MADE TO UNRESOLVED EXTERNAL
+    SYMBOL:  REG
+    MODULE:  .\output\protect.obj (PROTECT)
+    ADDRESS: 0EC1H
+
+*** WARNING L2: REFERENCE MADE TO UNRESOLVED EXTERNAL
+    SYMBOL:  _TWIREADAFE
+    MODULE:  .\output\protect.obj (PROTECT)
+    ADDRESS: 0EC5H
+
+*** WARNING L2: REFERENCE MADE TO UNRESOLVED EXTERNAL
+    SYMBOL:  REG
+    MODULE:  .\output\protect.obj (PROTECT)
+    ADDRESS: 0EC8H
+
+*** WARNING L2: REFERENCE MADE TO UNRESOLVED EXTERNAL
+    SYMBOL:  REG
+    MODULE:  .\output\protect.obj (PROTECT)
+    ADDRESS: 0EDFH
+
+*** WARNING L2: REFERENCE MADE TO UNRESOLVED EXTERNAL
+    SYMBOL:  REG
+    MODULE:  .\output\protect.obj (PROTECT)
+    ADDRESS: 0EE6H
+
+BL51 BANKED LINKER/LOCATER V6.22                                                      10/21/2019  18:03:41  PAGE 14
+
+
+*** WARNING L2: REFERENCE MADE TO UNRESOLVED EXTERNAL
+    SYMBOL:  REG
+    MODULE:  .\output\protect.obj (PROTECT)
+    ADDRESS: 0EE8H
+
+*** WARNING L2: REFERENCE MADE TO UNRESOLVED EXTERNAL
+    SYMBOL:  _TWIWRITEAFE
+    MODULE:  .\output\protect.obj (PROTECT)
+    ADDRESS: 0EECH
+
+*** WARNING L2: REFERENCE MADE TO UNRESOLVED EXTERNAL
+    SYMBOL:  INFO
+    MODULE:  .\output\protect.obj (PROTECT)
+    ADDRESS: 0D0FH
+
+*** WARNING L2: REFERENCE MADE TO UNRESOLVED EXTERNAL
+    SYMBOL:  INFO
+    MODULE:  .\output\protect.obj (PROTECT)
+    ADDRESS: 0D16H
+
+*** WARNING L2: REFERENCE MADE TO UNRESOLVED EXTERNAL
+    SYMBOL:  INFO
+    MODULE:  .\output\protect.obj (PROTECT)
+    ADDRESS: 0D34H
+
+*** WARNING L2: REFERENCE MADE TO UNRESOLVED EXTERNAL
+    SYMBOL:  INFO
+    MODULE:  .\output\protect.obj (PROTECT)
+    ADDRESS: 0D3BH
+
+*** WARNING L2: REFERENCE MADE TO UNRESOLVED EXTERNAL
+    SYMBOL:  INFO
+    MODULE:  .\output\protect.obj (PROTECT)
+    ADDRESS: 0C4FH
+
+*** WARNING L2: REFERENCE MADE TO UNRESOLVED EXTERNAL
+    SYMBOL:  INFO
+    MODULE:  .\output\protect.obj (PROTECT)
+    ADDRESS: 0C56H
+
+*** WARNING L2: REFERENCE MADE TO UNRESOLVED EXTERNAL
+    SYMBOL:  INFO
+    MODULE:  .\output\protect.obj (PROTECT)
+    ADDRESS: 0C74H
+
+*** WARNING L2: REFERENCE MADE TO UNRESOLVED EXTERNAL
+    SYMBOL:  INFO
+    MODULE:  .\output\protect.obj (PROTECT)
+    ADDRESS: 0C7BH
+
+*** WARNING L2: REFERENCE MADE TO UNRESOLVED EXTERNAL
+    SYMBOL:  UICELLVMAX
+    MODULE:  .\output\protect.obj (PROTECT)
+    ADDRESS: 10BEH
+
+*** WARNING L2: REFERENCE MADE TO UNRESOLVED EXTERNAL
+    SYMBOL:  UICELLVMIN
+BL51 BANKED LINKER/LOCATER V6.22                                                      10/21/2019  18:03:41  PAGE 15
+
+
+    MODULE:  .\output\protect.obj (PROTECT)
+    ADDRESS: 10C0H
+
+*** WARNING L2: REFERENCE MADE TO UNRESOLVED EXTERNAL
+    SYMBOL:  UICELLVMAX
+    MODULE:  .\output\protect.obj (PROTECT)
+    ADDRESS: 10C3H
+
+*** WARNING L2: REFERENCE MADE TO UNRESOLVED EXTERNAL
+    SYMBOL:  UICELLVMIN
+    MODULE:  .\output\protect.obj (PROTECT)
+    ADDRESS: 10C5H
+
+*** WARNING L2: REFERENCE MADE TO UNRESOLVED EXTERNAL
+    SYMBOL:  UICELLVMAX
+    MODULE:  .\output\protect.obj (PROTECT)
+    ADDRESS: 0EF0H
+
+*** WARNING L2: REFERENCE MADE TO UNRESOLVED EXTERNAL
+    SYMBOL:  UICELLVMIN
+    MODULE:  .\output\protect.obj (PROTECT)
+    ADDRESS: 0EF2H
+
+*** WARNING L2: REFERENCE MADE TO UNRESOLVED EXTERNAL
+    SYMBOL:  UICELLVMAX
+    MODULE:  .\output\protect.obj (PROTECT)
+    ADDRESS: 0EF5H
+
+*** WARNING L2: REFERENCE MADE TO UNRESOLVED EXTERNAL
+    SYMBOL:  UICELLVMIN
+    MODULE:  .\output\protect.obj (PROTECT)
+    ADDRESS: 0EF7H
+
+Program Size: data=14.1 xdata=114 code=4363
+LINK/LOCATE RUN COMPLETE.  37 WARNING(S),  0 ERROR(S)

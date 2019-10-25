@@ -1,0 +1,1 @@
+"code\Common.c" LARGE OPTIMIZE (7,SPEED) BROWSE INCDIR(.\header;.\roidmi\inc) DEBUG OBJECTEXTEND PRINT(.\output\Common.lst) TABS (2) OBJECT(.\output\Common.obj)

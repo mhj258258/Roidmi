@@ -1,0 +1,278 @@
+C51 COMPILER V9.52.0.0   MAIN                                                              10/24/2019 15:16:22 PAGE 1   
+
+
+C51 COMPILER V9.52.0.0, COMPILATION OF MODULE MAIN
+OBJECT MODULE PLACED IN .\output\Main.obj
+COMPILER INVOKED BY: C:\Program Files (x86)\keil 51\C51\BIN\C51.EXE code\Main.c LARGE OPTIMIZE(7,SPEED) BROWSE INCDIR(.\
+                    -header;.\roidmi\inc) DEBUG OBJECTEXTEND PRINT(.\output\Main.lst) TABS(2) OBJECT(.\output\Main.obj)
+
+line level    source
+
+   1          
+   2          /**
+   3            ********************************  SH39F004  *********************************
+   4            * @文件名     ： main.c
+   5            * @作者       ： tomi
+   6            * @库版本     ：
+   7            * @文件版本   ： V1.0.0
+   8            * @日期       ： 2019年7月31日
+   9            * @摘要       ： 主函数 - BMS
+  10            ******************************************************************************/
+  11          /*----------------------------------------------------------------------------
+  12            更新日志:modify
+  13              
+  14            ----------------------------------------------------------------------------*/
+  15          /* ----------------------------------包含的头文件 ----------------------------*/
+  16          
+  17          
+  18          #include "system.h"
+  19          #include "AfeMtp.h"
+  20          void Uart_Send_Byte(U8 DATA)
+  21          {
+  22   1        ES0 = 0; 
+  23   1        SBUF = DATA;
+  24   1        while(TI != 1);
+  25   1        TI = 0;
+  26   1        ES0 = 1;
+  27   1      }
+  28          void Uart_Send_string(U8 *s)
+  29          {
+  30   1        while(*s)
+  31   1        {
+  32   2          Uart_Send_Byte(*s++);
+  33   2        }
+  34   1      }
+  35          char putchar(char c)
+  36          {
+  37   1        Uart_Send_Byte(c);
+  38   1        return c;
+  39   1      }
+  40          
+  41          U8 xdata AFE_INT_EN_buf = 0;
+  42          extern U8 xdata KEY_state;
+  43          extern U8 xdata Short_flag;
+  44          void main(void)
+  45          {
+  46   1        
+  47   1        Initial();                //Initialize the system
+  48   1      
+  49   1        while(1)
+  50   1        { 
+  51   2      #if DEBUG
+                  TWIReadAFE(AFE_INT_EN, &AFE_INT_EN_buf);
+              //    Delay1ms(500);
+                  printf("\n AFE_INT_EN_buf = %bx \n",AFE_INT_EN_buf);    //0110 1100
+C51 COMPILER V9.52.0.0   MAIN                                                              10/24/2019 15:16:22 PAGE 2   
+
+              #endif  
+  56   2      
+  57   2      #if 0
+                  printf("\n test VOL = %hd \n",ADCRead(PACK_VOL));    
+              #endif  
+  60   2      #if 0
+                  printf("\n test CHG VOL = %hd \n",ADCRead(CHG_VOL));    
+              #endif  
+  63   2      #if debug
+                  printf("\n ----------------------------------------------------main hanshu -----------------------------
+             ------------------------------\n");    
+              #endif  
+  66   2      #if 0 //debug timer
+                  
+              //    Delay1ms(2000);
+                  if(bTimer1sFlg == 1)
+                  {
+              #if debug
+                  printf("\n 1s dinsghi \n");    
+              #endif  
+                    bTimer1sFlg = 0;
+                  //  IO_Error_4 = ~IO_Error_4;
+                  }
+              #endif
+  78   2          
+  79   2      
+  80   2          RSTSTAT = 0x00;
+  81   2          //ucresetflag是0x12的话并且已经发完就会强制初始化
+  82   2          if((ucResetFlag==0x12) && bUartSndAckFlg)   //Software reset occurs, and ended UART communication
+  83   2          {
+  84   3      #if debug
+                  printf("\n -------reset-------\n");    
+              #endif  
+  87   3            EA = 0;
+  88   3            ResetInit();          //Reset MCU
+  89   3          }
+  90   2          //ips程序不用管
+  91   2      //    if(bISPFlg && bUartSndAckFlg)
+  92   2      //    {
+  93   2      //      bISPFlg = 0;
+  94   2      //      ISPProcess();
+  95   2      //    }
+  96   2          //唤醒标志位被触发了，按键int4标志位46或alarm 标志位45被触发
+  97   2          if(bWakeupFlg)            //The charger / load, keys, communication can wake up the system
+  98   2          {
+  99   3      #if debug
+                    printf("\n -----WakeUpProcess-----\n");    
+              #endif  
+ 102   3            bWakeupFlg = 0;
+ 103   3            WakeUpProcess();        //System to be awakened
+ 104   3          }
+ 105   2      
+ 106   2      #if 0
+                  if(bKeyFlg)             //timeinterrupt will dectect keyprocess(),  if detected effective key
+                  { 
+                    bKeyFlg = 0;
+                    KeyProcess();
+                  }
+              #endif
+ 113   2          
+ 114   2          //ALARMPROCESS来判断是否有事件发生
+ 115   2          if(bAlarmFlg)//有报警 针对AFE才发生的
+C51 COMPILER V9.52.0.0   MAIN                                                              10/24/2019 15:16:22 PAGE 3   
+
+ 116   2          {
+ 117   3            //在这里面要添加我们自己的报警
+ 118   3            bAlarmFlg = 0;
+ 119   3            AlarmProcess();
+ 120   3          }
+ 121   2        
+ 122   2          if(bCADCFlg)//判断充电状态还是放电状态
+ 123   2          {
+ 124   3      #if debug
+                  printf("\n bCADCFlg is  1\n");    
+              #endif  
+ 127   3            bCADCFlg = 0;
+ 128   3            CurrProcess();          //Calculate the current value and determines the state of charge and discharge
+ 129   3          }
+ 130   2      
+ 131   2      //如果电压转换完成的话
+ 132   2          if(bVADCFlg)
+ 133   2          {     
+ 134   3            bVADCFlg = 0;
+ 135   3      #if debug
+                  printf("\n bVADCFlg is  1\n");    
+              #endif  
+ 138   3            BatteryInfoManage();        //Get battery voltage and temperature information
+ 139   3            
+ 140   3            //by tomi
+ 141   3            //新增断线保护
+ 142   3            
+ 143   3            CheckCtoVol();
+ 144   3      
+ 145   3          //平衡有两种功能，一个就是平衡电压，还有一个是断线检测
+ 146   3          //  BalManage();          //Process external voltage balance
+ 147   3      
+ 148   3          //  CellOpenProcess(); //断线检测开始标志位
+ 149   3      
+ 150   3          //  BalProcess();//开始5步的，断线检测时序
+ 151   3          }
+ 152   2      
+ 153   2      //串口发送校准值来进行校准的
+ 154   2      #if 0
+                  if(bCalibrationFlg)
+                  {
+                    bCalibrationFlg = 0;
+                    CaliProcess();          //PC calibration
+                  }
+              #endif
+ 161   2          
+ 162   2          if(bUpdataFlashFlg)
+ 163   2          {
+ 164   3      #if discurdebug
+ 165   3          printf("\n -----UpdataFlash-----\n");    
+ 166   3      #endif  
+ 167   3            bUpdataFlashFlg = 0;
+ 168   3            FlashProcess();
+ 169   3          }
+ 170   2      
+ 171   2      #if 0
+              //eeprom暂时不关注
+                  if(bEnEEPRomBK && bE2PProcessFlg)
+                  {
+                    bE2PProcessFlg = 0;
+                    E2PRomBKProcess();
+                  }
+C51 COMPILER V9.52.0.0   MAIN                                                              10/24/2019 15:16:22 PAGE 4   
+
+              #endif
+ 179   2          
+ 180   2      
+ 181   2          if(bTimer25msFlg)
+ 182   2          {
+ 183   3      #if 0
+                    printf("-------------25ms flag-------------\n");
+              #endif
+ 186   3            bTimer25msFlg = 0;            
+ 187   3              
+ 188   3            ProtectProcess();       //Detection of battery charge and discharge cut-off voltage
+ 189   3            //按键检测,什么时候检测?
+ 190   3            //1.充电时候不检测2.放电mos关闭的时候
+ 191   3      #if 1
+ 192   3            if(bCHGING == 0)
+ 193   3            {
+ 194   4                Scan_key();
+ 195   4            } 
+ 196   3      #endif  
+ 197   3      #if 0   
+                    //LED状态显示
+                    LED_Proc();
+              #endif  
+ 201   3          }
+ 202   2      
+ 203   2          if(bTimer1sFlg)           //timer is 1s
+ 204   2          {
+ 205   3      #if 0
+                    printf("-------------1s flag-------------\n");
+              #endif
+ 208   3            bTimer1sFlg = 0;
+ 209   3      
+ 210   3            RamCheckProcess();              //Detect the xdata block data     
+ 211   3      
+ 212   3            //LEDPowerOff();          //When the LED display 4s, turn off the LED
+ 213   3      
+ 214   3            VolProcess();         //Detection of battery charge and discharge cut-off voltage
+ 215   3      
+ 216   3            GaugeManage();          //Calculate the battery charge and discharge capacity
+ 217   3            //AFE寄存器防护
+ 218   3            AFERamCheck();                  //Check AFE Register    
+ 219   3      
+ 220   3            WriteFlashCheck();
+ 221   3      #if 0   
+                          if(bEnEEPRomBK)
+                          {
+                            E2PRomBKCheck();      //Detecting whether to backup EEPRom
+                          }
+              #endif
+ 227   3      
+ 228   3            LowPowerCheck();        //Detecting whether to enter a low-power
+ 229   3      
+ 230   3          }
+ 231   2      
+ 232   2          LowPowerProcess();
+ 233   2      #if 0  //测试唤醒的按键中断 
+               //   Delay1ms(1000);
+              //    IO_Error_8 = 0;
+              #endif
+ 237   2        }
+ 238   1      
+ 239   1      }
+C51 COMPILER V9.52.0.0   MAIN                                                              10/24/2019 15:16:22 PAGE 5   
+
+ 240          
+ 241          
+ 242          
+ 243          
+ 244          
+ 245          
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    186    ----
+   CONSTANT SIZE    =     25    ----
+   XDATA SIZE       =      1       3
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)
